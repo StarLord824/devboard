@@ -1,6 +1,6 @@
-import { WebSocketServer } from "ws";
-import { WebSocket } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import http from "http";
+import { authMiddleware } from "./authMiddleware";
 
 //http server
 const server = http.createServer();
@@ -8,7 +8,9 @@ const server = http.createServer();
 //ws server
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, request) => {
+  authMiddleware(ws, request);
+
   console.log("New client connected to the WebSocket server");
   ws.on("message", (data) => {
     const message = data.toString();
@@ -20,3 +22,4 @@ wss.on("connection", (ws) => {
 server.listen(8080, () => {
   console.log("Server is listening on port 8080");
 });
+
