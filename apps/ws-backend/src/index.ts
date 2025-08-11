@@ -9,11 +9,14 @@ const server = http.createServer();
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws) => {
-  ws.on("message", (message) => {
+  console.log("New client connected to the WebSocket server");
+  ws.on("message", (data) => {
+    const message = data.toString();
     console.log(message);
+    ws.send("Received the message on server: " + data);
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server is listening on port 3000");
+server.listen(8080, () => {
+  console.log("Server is listening on port 8080");
 });
