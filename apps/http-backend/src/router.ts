@@ -14,11 +14,12 @@ router.get('/', (req, res) => {
     res.status(200).send(`This is devboard backend, route : ${req.url}`);
 });
 
-router.post('signup', (req, res) => {
+router.post('/signup', (req, res) => {
+    // res.send("This is devboard backend, route : /api/v1/users/signup");
     const body : z.infer<typeof userSchema> = req.body;
     console.log(body);
     //return error if validation fails
-    if(!userSchema.safeParse(body)){
+    if(!userSchema.safeParse(body)){ 
         res.status(400).send('Invalid request body');
         return;
     }
@@ -43,7 +44,7 @@ router.post('signup', (req, res) => {
     });
 });
  
-router.post('login', (req, res) => {
+router.post('/login', (req, res) => {
 
     const body : z.infer<typeof loginSchema> = req.body;
 
@@ -60,6 +61,7 @@ router.post('login', (req, res) => {
         prisma.user.findUnique({
             where: {
                 username: body.username,
+                password: body.password,
             }
         }).then((user: UserSchemaType | null) => {
             if(!user){
@@ -73,7 +75,7 @@ router.post('login', (req, res) => {
     });
 });
 
-router.get('create-board', authMiddleware,  (req, res) => {
+router.post('/create-board', authMiddleware,  (req, res) => {
     const { slug, admin, participants } = req.body;
     if(!boardSchema.safeParse({slug, admin, participants})){
         res.status(400).send('Invalid request body');
