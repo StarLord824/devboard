@@ -1,0 +1,3 @@
+{
+  "extends": "@devboard/typescript-config/base.json",
+}

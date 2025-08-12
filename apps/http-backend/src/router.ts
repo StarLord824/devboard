@@ -1,18 +1,16 @@
 import { Router } from "express";
-// import {prisma} from "@devboard/db"
+import {prisma} from "@devboard/db/prismaClient"
 import { z } from "zod";
 import jwt from "jsonwebtoken";
-import { jwt_secret } from "./config";
+import { jwt_secret } from "@devboard/common/config";
 import { authMiddleware } from "./middlewares";
+import { userSchema, loginSchema, boardSchema} from "@devboard/common/types";
 
 const router : Router = Router();
 
-const userSchema = z.object({
-    username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/), //username check
-    name: z.string().min(3).max(20), //name check
-    email: z.string().min(3).max(20).email(), //email check
-    password: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) //password check
-})
+type UserSchemaType = z.infer<typeof userSchema>;
+type LoginSchemaType = z.infer<typeof loginSchema>;
+type BoardSchemaType = z.infer<typeof boardSchema>;
 
 router.get('/', (req, res) => {
     res.status(200).send(`This is devboard backend, route : ${req.url}`);
@@ -32,8 +30,21 @@ router.post('signup', (req, res) => {
             res.status(500).send('Internal Server Error');
             return;
         }
-        res.status(200).send(`This is devboard backend, route : ${req.url}`);
+        prisma.user.create({
+            data: {
+                username: body.username,
+                name: body.name,
+                email: body.email,
+                password: body.password,
+            }
+        }).then((user: UserSchemaType) => {
+            res.status(200).send(`This is devboard backend, route : ${req.url}, user : ${user}`);
+        }).catch((err) => {
+            res.status(500).send('Internal Server Error, error: ' + err);
+        });
     });
+
+    
 });
  
 router.post('login', (req, res) => {
@@ -50,6 +61,19 @@ router.post('login', (req, res) => {
             res.status(401).send('Unauthorized');
             return;
         }
+        prisma.user.findUnique({
+            where: {
+                username: body.username,
+            }
+        }).then((user: UserSchemaType | null) => {
+            if(!user){
+                res.status(404).send('User not found');
+                return;
+            }
+            res.status(200).send(`This is devboard backend, route : ${req.url}, user : ${user}`);
+        }).catch((err) => {
+            res.status(500).send('Internal Server Error, error: ' + err);
+        });
         res.status(200).send(`This is devboard backend, route : ${req.url}`);
     });
 });

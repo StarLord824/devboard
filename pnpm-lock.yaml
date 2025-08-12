@@ -20,6 +20,9 @@ importers:
 
   apps/http-backend:
     dependencies:
+      '@devboard/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
@@ -33,6 +36,9 @@ importers:
         specifier: ^4.0.17
         version: 4.0.17
     devDependencies:
+      '@devboard/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@devboard/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -86,6 +92,9 @@ importers:
         specifier: ^8.18.3
         version: 8.18.3
     devDependencies:
+      '@devboard/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@devboard/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
@@ -93,14 +102,34 @@ importers:
         specifier: ^8.18.1
         version: 8.18.1
 
+  packages/common:
+    dependencies:
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
+      zod:
+        specifier: ^4.0.17
+        version: 4.0.17
+    devDependencies:
+      '@devboard/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+
   packages/db:
     dependencies:
       '@prisma/client':
         specifier: 6.13.0
         version: 6.13.0(prisma@6.13.0(typescript@5.8.3))(typescript@5.8.3)
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
       prisma:
         specifier: ^6.13.0
         version: 6.13.0(typescript@5.8.3)
+    devDependencies:
+      '@devboard/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
 
   packages/eslint-config:
     devDependencies:
@@ -138,7 +167,11 @@ importers:
         specifier: ^8.37.0
         version: 8.37.0(eslint@9.31.0(jiti@2.5.1))(typescript@5.8.2)
 
-  packages/typescript-config: {}
+  packages/typescript-config:
+    dependencies:
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
 
 packages:
 

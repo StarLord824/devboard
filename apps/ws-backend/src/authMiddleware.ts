@@ -1,6 +1,6 @@
 import http from "http";
 import jwt from "jsonwebtoken";
-import { jwt_secret } from "./config";
+import { jwt_secret } from "@devboard/common/config";
 import { WebSocket } from "ws";
 
 export const authMiddleware = (ws : WebSocket, request : http.IncomingMessage) => {
