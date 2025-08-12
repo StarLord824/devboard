@@ -11,9 +11,9 @@ export const userSchema = z.object({
     password: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) //password check
 })
 export const boardSchema= z.object({
-    name: z.string().min(2).max(15),
-    description: z.string().min(2).max(30),
-    isPublic: z.boolean(),
+    slug: z.string().min(2).max(15),
+    admin: z.string(),
+
 })
 // export type LoginSchemaType = z.infer<typeof loginSchema>;
 // export type UserSchemaType = z.infer<typeof userSchema>;
