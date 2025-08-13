@@ -13,7 +13,8 @@ export const userSchema = z.object({
 export const boardSchema= z.object({
     slug: z.string().min(2).max(15),
     admin: z.string(),
-
+    participants: z.array(z.string()),
+    chats: z.array(z.string())
 })
 // export type LoginSchemaType = z.infer<typeof loginSchema>;
 // export type UserSchemaType = z.infer<typeof userSchema>;
