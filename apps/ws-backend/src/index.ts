@@ -14,10 +14,6 @@ const server = http.createServer();
 //ws server
 const wss = new WebSocketServer({ server });
 
-
-//global state
-
-
 const users: z.infer<typeof userStateSchema>[] = [];
 // const boards: z.infer<typeof boardStateSchema>[] = [];
 

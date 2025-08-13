@@ -4,6 +4,7 @@ import signup from "./controllers/signup";
 import signin from "./controllers/signin";
 import create_board from "./controllers/create_board";
 import get_board from "./controllers/get_board";
+import get_chats from "./controllers/get_chats";
 
 const router : Router = Router();
 
@@ -27,4 +28,7 @@ router.get('/boards', authMiddleware, async (req, res) => {
     get_board(req, res);
 });
 
+router.get('/chats:boardId', authMiddleware, async (req, res) => {
+    get_chats(req, res);
+});
 export default router;

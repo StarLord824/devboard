@@ -15,7 +15,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "jsonwebtoken": "^9.0.2",
     "ws": "^8.18.3",
-    "zod": "^4.0.17"
+    "zod": "^4.0.17",
+    "@devboard/db": "workspace:*"
   },
   "devDependencies": {
     "@devboard/common": "workspace:*",
