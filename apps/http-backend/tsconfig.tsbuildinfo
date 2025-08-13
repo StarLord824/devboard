@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/middlewares.ts","./src/router.ts"],"version":"5.8.3"}
+{"root":["./src/index.ts","./src/middlewares.ts","./src/router.ts","./src/services/db.ts","./src/services/hash.ts","./src/services/jwt.ts","./src/services/validate.ts"],"version":"5.8.3"}
