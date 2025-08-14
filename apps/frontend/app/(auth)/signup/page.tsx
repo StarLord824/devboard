@@ -2,6 +2,7 @@
 import {useForm, type SubmitHandler} from 'react-hook-form'
 import {z} from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useRouter } from 'next/navigation'
 
 export default function SignUp() {
   //get input of userame, name, email, password
@@ -15,21 +16,24 @@ export default function SignUp() {
   const {register, handleSubmit, formState: {errors, isSubmitting}, } = useForm<Inputs>({
     resolver: zodResolver(Inputs),
   })
+
+  const router = useRouter();
   const submitHandler : SubmitHandler<Inputs> = async (data: Inputs) => {
     //call to http backend to create user
-    const response = await fetch('/api/v1/users/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    if (response.ok) {
-      console.log('User created successfully')
-    } else {
-      console.log('Error creating user')
-    }
+    // const response = await fetch('/api/v1/users/signup', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify(data),
+    // })
+    // if (response.ok) {
+    //   console.log('User created successfully')
+    // } else {
+    //   console.log('Error creating user')
+    // }
     console.log(data)
+    router.push('/home');
   }
   return (
     <div className='flex flex-col items-center justify-center h-screen w-screen text-center gap-3 bg-white'>

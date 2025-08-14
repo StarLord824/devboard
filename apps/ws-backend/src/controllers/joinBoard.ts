@@ -9,32 +9,41 @@ export default async function (ws : WebSocket, request: any, parsedData: z.infer
     const slug = parsedData.slug;
     const userId = parsedData.userId;
     
-    //check if board exists in db
-    const board = await prisma.board.findUnique({
-    where: {
-        slug: slug
-    }
-    });
-    if(!board){
-    ws.send(JSON.stringify({
-        type: "error",
-        message: "Board does not exist"
-    }));
-    return;
-    }
+    try {
+        //check if board exists in db
+        const board = await prisma.board.findUnique({
+        where: {
+            slug: slug
+        }
+        });
+        if(!board){
+        ws.send(JSON.stringify({
+            type: "error",
+            message: "Board does not exist"
+        }));
+        return;
+        }
 
-    const boardId = board.id;
-    const user =users.find( (user) => user.userId === userId);
-    if(!user) {
-    users.push({
-        userId,
-        WebSocket: ws,
-        boards: [boardId]
-    })
-    } else {
-    //check if the board is already in the array
-    if(!user.boards.includes(boardId)){
-        user.boards.push(boardId);
-    }
+        const boardId = board.id;
+        const user =users.find( (user) => user.userId === userId);
+        if(!user) {
+        users.push({
+            userId,
+            WebSocket: ws,
+            boards: [boardId]
+        })
+        } else {
+        //check if the board is already in the array
+        if(!user.boards.includes(boardId)){
+            user.boards.push(boardId);
+        }
+        }
+    } catch(error){
+        console.log(`Error from db`, error);
+        ws.send(JSON.stringify({
+            type: "error",
+            message: "Error from db"
+        }));
+        return;
     }
 }

@@ -9,7 +9,7 @@ import get_chats from "./controllers/get_chats";
 const router : Router = Router();
 
 router.get('/', (req, res) => {
-    res.status(200).send(`This is devboard backend, route : ${req.url}`);
+    res.status(200).send(`This is devboard backend, route : api/v1${req.url}`);
 });
 
 router.post('/signup', async (req, res) => {

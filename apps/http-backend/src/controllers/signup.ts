@@ -39,7 +39,7 @@ export default async (req: Request, res: Response) => {
         return;
     }
     //jwt token for password auth and middlewares  
-    const token = signToken(newUser.id);
+    const token = signToken({userId: newUser.id});
     if(!token){
         console.log('JWT token error at signToken');
         res.status(500).send('Internal Server Error');

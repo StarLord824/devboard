@@ -1,1 +1,1 @@
-{"root":["./src/authmiddleware.ts","./src/index.ts"],"version":"5.8.3"}
+{"root":["./src/authmiddleware.ts","./src/index.ts","./src/types.ts","./src/controllers/chat.ts","./src/controllers/createboard.ts","./src/controllers/deleteboard..ts","./src/controllers/joinboard.ts","./src/controllers/leaveboard.ts"],"version":"5.8.3"}

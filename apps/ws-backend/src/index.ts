@@ -21,6 +21,7 @@ wss.on("connection", async (ws : WebSocket, request) => {
   
   const userId = authMiddleware(ws, request);
   if(!userId){
+    console.log('Unauthorized')
     ws.close();
     return;
   }
@@ -37,6 +38,7 @@ wss.on("connection", async (ws : WebSocket, request) => {
 
     if(parsedData.type === "create-board"){
       createBoard(ws, request, parsedData, users)
+      ws.send('create-board');
     }
     else if(parsedData.type === "join-board"){
       joinBoard(ws, request, parsedData, users);

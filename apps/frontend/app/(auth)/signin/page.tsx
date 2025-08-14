@@ -1,7 +1,9 @@
 'use client'
+
 import {useForm, type SubmitHandler} from 'react-hook-form'
 import {z} from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useRouter } from 'next/navigation'
 
 export default function SignIn() {
   //get input of userame and password
@@ -13,20 +15,10 @@ export default function SignIn() {
   const {register, handleSubmit, formState: {errors, isSubmitting}, } = useForm<Inputs>({
     resolver: zodResolver(Inputs),
   })
+  const router = useRouter();
   const submitHandler : SubmitHandler<Inputs> = async (data: Inputs) => {
-    const response = await fetch('/api/v1/users/signin', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    if (response.ok) {
-      console.log('User signed in successfully')
-    } else {
-      console.log('Error signing in')
-    }
     console.log(data)
+    router.push('/home');
   }
   return (
     <div className='flex flex-col items-center justify-center h-screen w-screen text-center gap-3 bg-white  rounded-2xl border-2 border-gray-500'>
