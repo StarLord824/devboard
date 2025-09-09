@@ -8,6 +8,7 @@ import leaveBoard from "./controllers/leaveBoard";
 import deleteBoard from "./controllers/deleteBoard.";
 import chat from "./controllers/chat";
 import { parsedDataSchema, userStateSchema } from "./types";
+
 //http server
 const server = http.createServer();
 
@@ -35,23 +36,28 @@ wss.on("connection", async (ws : WebSocket, request) => {
   console.log("New client connected to the WebSocket server");
   ws.on("message", async (data) => {
     const parsedData : z.infer<typeof parsedDataSchema> = JSON.parse(data as unknown as string);
-
-    if(parsedData.type === "create-board"){
+    const operation = parsedData.type
+    if(operation === "create-board"){
       createBoard(ws, request, parsedData, users)
-      ws.send('create-board');
+      ws.send('create-board'); 
     }
-    else if(parsedData.type === "join-board"){
+    else if(operation === "join-board"){
       joinBoard(ws, request, parsedData, users);
+      ws.send('join-board');
     }
-    else if(parsedData.type === "leave-board"){
+    else if(operation === "leave-board"){
       leaveBoard(ws, request, parsedData, users);
+      ws.send('leave-board');
     }
-    else if(parsedData.type === "delete-board"){
+    else if(operation === "delete-board"){
       deleteBoard(ws, request, parsedData, users);
+      ws.send('delete-board');
     }
-    else if(parsedData.type === "chat"){
+    else if(operation === "chat"){
       chat( ws, request, parsedData, users);
-    } else {
+      ws.send('chat');
+    } 
+    else {
       ws.send(JSON.stringify({
         type: "error",
         message: "Invalid message type"

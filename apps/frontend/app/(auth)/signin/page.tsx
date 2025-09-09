@@ -21,9 +21,9 @@ export default function SignIn() {
     router.push('/home');
   }
   return (
-    <div className='flex flex-col items-center justify-center h-screen w-screen text-center gap-3 bg-white  rounded-2xl border-2 border-gray-500'>
+    <div className='flex flex-col items-center justify-center h-screen w-screen text-center gap-3 bg-neutral-900 rounded-2xl border-2 border-gray-500'>
       <form action="/home" onSubmit={handleSubmit(submitHandler)}
-        className='flex flex-col items-center justify-center h-3/4 w-2/5 text-center bg-red-600 gap-3'
+        className='flex flex-col items-center justify-center h-3/4 w-100 text-center bg-blue-600 rounded-2xl gap-3'
       >
         <input type="text" placeholder='Username' {...register('username')} 
           className='bg-gray-100 border-2 border-gray-300 rounded-lg p-2 text-center text-black font-semibold'
