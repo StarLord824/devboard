@@ -1,12 +1,14 @@
 import Link from "next/link";
 import BoardsDashboard from "./components/Dashboard";
 import CollaborativeWhiteboard from "./components/Board";
+import Landing from "./components/Landing";
 
 export default function Home() {
   return (
     <div>
       {/* <BoardsDashboard /> */}
-      < CollaborativeWhiteboard />
+      {/* < CollaborativeWhiteboard /> */}
+      <Landing/>
     </div>
     // <div className="flex flex-col items-center justify-evenly h-screen w-screen bg-neutral-950">
     //   <h1 className="text-3xl font-bold text-center">Welcome to DevBoard</h1>

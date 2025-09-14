@@ -9,7 +9,7 @@ app.use(express.urlencoded());
 app.use('/api/v1', router);
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("Welcome to the DevBoard HTTP Backend");
 });
 
 app.listen(8000, () => {

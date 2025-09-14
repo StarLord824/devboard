@@ -24,11 +24,21 @@ router.post('/create-board', authMiddleware, async (req, res) => {
     create_board(req, res);
 });
 
-router.get('/boards', authMiddleware, async (req, res) => {
-    get_board(req, res);
+router.get('/boards/:slug', authMiddleware, async (req, res) => {
+    const {slug} = req.params;
+    if(!slug) {
+        res.status(400).send('Board slug is required');
+        return;
+    }
+    get_board(req, res, slug);
 });
 
-router.get('/chats:boardId', authMiddleware, async (req, res) => {
-    get_chats(req, res);
+router.get('/chats/:slug', authMiddleware, async (req, res) => {
+    const {slug} = req.params;
+    if(!slug) {
+        res.status(400).send('Board slug is required');
+        return;
+    }
+    get_chats(req, res, slug);
 });
 export default router;

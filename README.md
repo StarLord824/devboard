@@ -1,135 +1,108 @@
-# Turborepo starter
 
-This Turborepo starter is maintained by the Turborepo core team.
+Finmate.dev is a **finance-focused browser extension and platform** that transforms your new tab into a **personalized financial dashboard**.  
+It brings together **wallet tracking, market insights, financial news, and recommendations** — all in one elegant interface.  
 
-## Using this example
+Built with **Turborepo** for scalability, shared packages, and multi-language support (JS/TS, Go, Python).
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## 🚀 Tech Stack
+
+- **Monorepo:** [Turborepo](https://turbo.build/repo)  
+- **Frontend:** Next.js (Extension UI + Marketing site)  
+- **Backend:** Fastify (Node.js, TypeScript) + Prisma + PostgreSQL  
+- **ORM:** Prisma  
+- **Auth:** JWT / Auth.js / Clerk (planned)  
+- **Styling:** Tailwind CSS + shadcn/ui  
+- **Infra (planned):** Redis (caching), Go (services), Python (analytics/ML)
+
+---
+
+## 📂 Monorepo Structure
+
+finmate-dev/
+apps/
+extension/ # Chrome/Edge extension (finance dashboard)
+web/ # Marketing & landing site
+api/ # Backend service (Fastify + Prisma)
+packages/
+ui/ # Shared UI components
+utils/ # Shared helper functions
+config/ # ESLint, Prettier, tsconfig
+types/ # Shared TypeScript types
+
+yaml
+Copy code
+
+---
+
+## 🛠️ Development
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/<your-username>/finmate-dev.git
+cd finmate-dev
 ```
 
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+### 2. Install dependencies
+```bash
+pnpm install
+# or npm install / yarn install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+### 3. Setup environment
+Create a .env file in apps/api/ with:
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/finmate"
+JWT_SECRET="supersecret"
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+### 4. Run Prisma migrations
+```bash
+cd apps/api
+pnpm prisma migrate dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
+### 5. Start dev server
+```bash
+# From root
+pnpm dev
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+apps/api → runs Fastify backend at http://localhost:4000
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+apps/extension → runs Next.js extension UI
 
-### Remote Caching
+apps/web → runs marketing site
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+📦 Scripts
+From root:
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+Copy code
+pnpm dev       # Start all apps in parallel (extension, api, web)
+pnpm build     # Build all apps/packages
+pnpm lint      # Run lint checks
+pnpm format    # Format code with Prettier
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## 📌 Roadmap
+ User authentication (JWT/Auth.js/Clerk)
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+ Wallet management (crypto + fiat)
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
+ Transaction tracking
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
+ Asset monitoring (stocks, crypto, ETFs)
 
-## Useful Links
+ Market news aggregation
 
-Learn more about the power of Turborepo:
+ AI-powered recommendations
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+ Polished extension UI with Tailwind + shadcn
+
+## 🤝 Contributing
+Contributions, issues, and feature requests are welcome!
+Feel free to open a PR or start a discussion.
+
+📜 License
+MIT © 2025 Finmate.dev
