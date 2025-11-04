@@ -32,6 +32,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
+      erase2d:
+        specifier: ^1.0.4
+        version: 1.0.4(fabric@6.7.1)
       fabric:
         specifier: ^6.7.1
         version: 6.7.1
@@ -1182,6 +1185,12 @@ packages:
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
+
+  erase2d@1.0.4:
+    resolution: {integrity: sha512-joiZ4GLMfQYYMWmGM92K+pGiib05vEo/O++eO7LMdQ2pVZHfmgl3ZaQr3PTEfumKYkNa8OBW7Yk8JJq553uyEA==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+    peerDependencies:
+      fabric: 6.0.0-beta18
 
   es-abstract@1.24.0:
     resolution: {integrity: sha512-WSzPgsdLtTcQwm4CROfS5ju2Wa1QQcVeT37jFjYzdFz1r9ahadC8B8/a4qxJxM+09F18iumCdRmlr96ZYkQvEg==}
@@ -3729,6 +3738,10 @@ snapshots:
 
   entities@6.0.1:
     optional: true
+
+  erase2d@1.0.4(fabric@6.7.1):
+    dependencies:
+      fabric: 6.7.1
 
   es-abstract@1.24.0:
     dependencies:
