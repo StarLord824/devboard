@@ -1,4 +1,4 @@
-import { boardSchema } from "@devboard/common/types";
+import { boardSchema } from "@devboard/common/types/board";
 import { createBoard, getBoard } from "../services/db";   
 import { Request, Response } from "express";    
 

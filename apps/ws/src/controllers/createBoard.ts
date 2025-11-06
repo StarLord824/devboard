@@ -1,4 +1,4 @@
-import { prisma } from "@devboard/db/prismaClient";
+import prisma from "@devboard/db/prismaClient";
 import { WebSocket } from "ws";
 import { z } from "zod";
 import { parsedDataSchema, userStateSchema } from "../utils/types";

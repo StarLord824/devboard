@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { userSchema } from "@devboard/common/types";
+import { userSchema } from "@devboard/common/types/user";
 import { signToken } from "../services/jwt";
 import { createUser, getUser } from "../services/db";
 import { hashPassword } from "../services/hash";

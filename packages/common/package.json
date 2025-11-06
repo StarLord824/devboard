@@ -8,7 +8,7 @@
   },
   "exports": {
     "./config": "./src/config.ts",
-    "./types": "./src/types.ts"
+    "./types/*": "./src/types/*.ts"
   },
   "keywords": [],
   "author": "",

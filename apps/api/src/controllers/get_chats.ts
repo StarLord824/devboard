@@ -1,8 +1,8 @@
 import { prisma } from "@devboard/db/prismaClient";
 import {Request, Response} from "express";
 import { z } from "zod";
-export default async function (req : Request, res : Response, slug: string) {
 
+export default async function (req : Request, res : Response, slug: string) {
     //validate the request
     const reqSchema = z.object({
         boardId: z.number(),

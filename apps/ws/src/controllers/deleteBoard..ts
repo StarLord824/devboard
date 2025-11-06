@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { z } from "zod";
 import { parsedDataSchema, userStateSchema } from "../utils/types";
-import { prisma } from "@devboard/db/prismaClient";
+import prisma from "@devboard/db/prismaClient";
 
 export default async function (
   ws: WebSocket,

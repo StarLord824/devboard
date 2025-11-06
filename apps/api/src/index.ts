@@ -8,7 +8,7 @@ app.use(express.urlencoded());
 
 app.use('/api/v1', router);
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("Welcome to the DevBoard HTTP Backend");
 });
 

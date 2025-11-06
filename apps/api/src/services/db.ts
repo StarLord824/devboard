@@ -1,5 +1,6 @@
 import { prisma } from "@devboard/db/prismaClient";
-import { boardSchema, userSchema } from "@devboard/common/types";
+import { boardSchema } from '@devboard/common/types/board';
+import { userSchema } from '@devboard/common/types/user';
 import { z } from "zod";
 
 export const createUser = async (user: z.infer<typeof userSchema>) => {

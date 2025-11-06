@@ -7,4 +7,4 @@ export const userSchema = z.object({
     password: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) //password check
 })
 
-export type UserSchemaType = z.infer<typeof userSchema>;
+// export type UserSchemaType = z.infer<typeof userSchema>;

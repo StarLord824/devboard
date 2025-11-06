@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authMiddleware } from "./middlewares";
+
 import signup from "./controllers/signup";
 import signin from "./controllers/signin";
-import create_board from "./controllers/create_board";
 import get_board from "./controllers/get_board";
 import get_chats from "./controllers/get_chats";
+import create_board from "./controllers/create_board";
 
 const router : Router = Router();
 
@@ -41,4 +42,5 @@ router.get('/chats/:slug', authMiddleware, async (req, res) => {
     }
     get_chats(req, res, slug);
 });
+
 export default router;
