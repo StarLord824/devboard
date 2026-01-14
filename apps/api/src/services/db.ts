@@ -1,4 +1,4 @@
-import { prisma } from "@devboard/db/prismaClient";
+import prisma from "@devboard/db/prismaClient";
 import { boardSchema } from '@devboard/common/types/board';
 import { userSchema } from '@devboard/common/types/user';
 import { z } from "zod";

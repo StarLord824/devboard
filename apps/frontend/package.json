@@ -10,10 +10,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@devboard/common": "workspace:*",
     "@hookform/resolvers": "^5.2.1",
     "@repo/ui": "workspace:*",
     "axios": "^1.11.0",
     "cookie-parser": "^1.4.7",
+    "konva": "^10.1.0",
     "lucide-react": "^0.543.0",
     "motion": "^12.23.12",
     "next": "15.4.6",
@@ -21,6 +23,9 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
+    "react-konva": "^19.2.1",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.29",
     "zod": "^4.0.17"
   },
   "devDependencies": {

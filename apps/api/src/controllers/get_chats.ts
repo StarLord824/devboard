@@ -1,4 +1,4 @@
-import { prisma } from "@devboard/db/prismaClient";
+import prisma from "@devboard/db/prismaClient";
 import {Request, Response} from "express";
 import { z } from "zod";
 

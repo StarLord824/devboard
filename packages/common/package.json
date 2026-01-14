@@ -8,6 +8,7 @@
   },
   "exports": {
     "./config": "./src/config.ts",
+    "./types/canvas": "./src/types/canvas.ts",
     "./types/*": "./src/types/*.ts"
   },
   "keywords": [],

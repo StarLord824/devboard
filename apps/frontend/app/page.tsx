@@ -1,21 +1,18 @@
+"use client";
+
 import Link from "next/link";
-import BoardsDashboard from "./components/Dashboard";
-import CollaborativeWhiteboard from "./components/Board";
+import dynamic from "next/dynamic";
 import Landing from "./components/Landing";
+
+const CanvasBoard = dynamic(() => import("./components/Canvas"), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full flex items-center justify-center">Loading Canvas...</div>
+});
 
 export default function Home() {
   return (
-    <div>
-      {/* <BoardsDashboard /> */}
-      {/* < CollaborativeWhiteboard /> */}
-      <Landing/>
+    <div className="w-screen h-screen">
+       <CanvasBoard slug="demo-board" userName={`User-${Math.floor(Math.random() * 1000)}`} />
     </div>
-    // <div className="flex flex-col items-center justify-evenly h-screen w-screen bg-neutral-950">
-    //   <h1 className="text-3xl font-bold text-center">Welcome to DevBoard</h1>
-    //   <div className="flex h-1/3 w-1/2 justify-evenly items-center">
-    //     <Link href="/signin" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Sign In</Link>
-    //     <Link href="/signup" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Sign Up</Link>
-    //   </div> 
-    // </div>  
   );
 }
