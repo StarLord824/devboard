@@ -14,8 +14,6 @@
     "@repo/ui": "workspace:*",
     "axios": "^1.11.0",
     "cookie-parser": "^1.4.7",
-    "erase2d": "^1.0.4",
-    "fabric": "^6.7.1",
     "lucide-react": "^0.543.0",
     "motion": "^12.23.12",
     "next": "15.4.6",

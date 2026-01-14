@@ -18,6 +18,40 @@ importers:
         specifier: 5.8.3
         version: 5.8.3
 
+  apps/api:
+    dependencies:
+      '@devboard/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@types/bcrypt':
+        specifier: ^6.0.0
+        version: 6.0.0
+      '@types/jsonwebtoken':
+        specifier: ^9.0.10
+        version: 9.0.10
+      bcrypt:
+        specifier: ^6.0.0
+        version: 6.0.0
+      express:
+        specifier: ^5.1.0
+        version: 5.1.0
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
+      zod:
+        specifier: ^4.0.17
+        version: 4.0.17
+    devDependencies:
+      '@devboard/common':
+        specifier: workspace:*
+        version: link:../../packages/common
+      '@devboard/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/express':
+        specifier: ^5.0.3
+        version: 5.0.3
+
   apps/frontend:
     dependencies:
       '@hookform/resolvers':
@@ -88,41 +122,7 @@ importers:
         specifier: ^5
         version: 5.8.3
 
-  apps/http-backend:
-    dependencies:
-      '@devboard/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@types/bcrypt':
-        specifier: ^6.0.0
-        version: 6.0.0
-      '@types/jsonwebtoken':
-        specifier: ^9.0.10
-        version: 9.0.10
-      bcrypt:
-        specifier: ^6.0.0
-        version: 6.0.0
-      express:
-        specifier: ^5.1.0
-        version: 5.1.0
-      jsonwebtoken:
-        specifier: ^9.0.2
-        version: 9.0.2
-      zod:
-        specifier: ^4.0.17
-        version: 4.0.17
-    devDependencies:
-      '@devboard/common':
-        specifier: workspace:*
-        version: link:../../packages/common
-      '@devboard/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/express':
-        specifier: ^5.0.3
-        version: 5.0.3
-
-  apps/ws-backend:
+  apps/ws:
     dependencies:
       '@devboard/db':
         specifier: workspace:*
@@ -177,6 +177,9 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.3
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       prisma:
         specifier: ^6.13.0
         version: 6.13.0(typescript@5.8.3)
@@ -1156,6 +1159,10 @@ packages:
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
+
+  dotenv@17.2.3:
+    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
     engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
@@ -3708,6 +3715,8 @@ snapshots:
   dotenv@16.0.3: {}
 
   dotenv@16.6.1: {}
+
+  dotenv@17.2.3: {}
 
   dunder-proto@1.0.1:
     dependencies:
