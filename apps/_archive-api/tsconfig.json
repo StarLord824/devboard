@@ -1,10 +1,7 @@
 {
   "extends": "@devboard/typescript-config/base.json",
   "compilerOptions": {
-    "module": "CommonJS",
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
 }

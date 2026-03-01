@@ -1,17 +1,20 @@
 import express from "express";
-import router from "./router";
+import cors from "cors";
+import dotenv from "dotenv";
+import { z } from "zod";
+
+dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded());
 
-app.use('/api/v1', router);
-
-app.get("/", (_req, res) => {
-  res.send("Welcome to the DevBoard HTTP Backend");
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "api", v: 2 });
 });
 
-app.listen(8000, () => {
-  console.log("Server is listening on port 8000");
-}); 
+app.listen(PORT, () => {
+  console.log(`[API] Server is running on port ${PORT}`);
+});
