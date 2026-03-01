@@ -12,6 +12,7 @@ import { nanoid } from "nanoid";
 import Toolbar from "./Toolbar";
 import SettingsPanel from "./SettingsPanel";
 import Minimap from "./Minimap";
+import ZoomControls from "./ZoomControls";
 
 const LAYER_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -110,7 +111,12 @@ export default function CanvasLayers({ boardId }: { boardId: string }) {
         onStrokeColorChange={engine.setStrokeColor}
         strokeWidth={engine.strokeWidth}
         onStrokeWidthChange={engine.setStrokeWidth}
+        lineDash={engine.lineDash}
+        onLineDashChange={engine.setLineDash}
       />
+
+      {/* Zoom Controls */}
+      <ZoomControls />
 
       {/* Settings Panel */}
       {settingsPanelOpen && <SettingsPanel />}

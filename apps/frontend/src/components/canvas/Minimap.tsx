@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import type { CanvasElement } from "@/lib/canvas-types";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { renderElement } from "./elements/renderer";
+import { getThemeColors } from "@/lib/color-utils";
 
 interface MinimapProps {
   elements: Map<string, CanvasElement>;
@@ -18,7 +19,7 @@ const MINIMAP_H = 100;
 
 export default function Minimap({ elements, elementOrder }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { zoom, camera } = useCanvasStore();
+  const { zoom, camera, canvasColor } = useCanvasStore();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -27,7 +28,7 @@ export default function Minimap({ elements, elementOrder }: MinimapProps) {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, MINIMAP_W, MINIMAP_H);
-    ctx.fillStyle = "#f8fafc";
+    ctx.fillStyle = canvasColor;
     ctx.fillRect(0, 0, MINIMAP_W, MINIMAP_H);
 
     if (elementOrder.length === 0) return;

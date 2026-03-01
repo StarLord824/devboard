@@ -1,14 +1,7 @@
 "use client";
 
 // CanvasEngine — The core rendering engine and event handler.
-// Uses 4 stacked HTML5 canvases:
-//   STATIC  (z=1) — committed elements. Redrawn on state or viewport change.
-//   ACTIVE  (z=2) — element currently being drawn. Cleared every mousemove.
-//   CURSOR  (z=3) — remote collaborator cursors (Phase 4).
-//   OVERLAY (z=4) — selection handles, resize knobs.
-//
-// RENDERING FIX: renderAll is stored in a ref so the RAF callback always
-// calls the latest version, avoiding stale closure bugs.
+// Uses 4 stacked HTML5 canvases.
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import type { CanvasElement, ToolType } from "@/lib/canvas-types";
@@ -22,6 +15,7 @@ import { renderElement } from "./elements/renderer";
 import { simplifyPath } from "@/lib/simplify-path";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { nanoid } from "nanoid";
+import { getThemeColors } from "@/lib/color-utils";
 
 interface UseCanvasEngineOptions {
   elements: Map<string, CanvasElement>;
@@ -46,13 +40,10 @@ export const COLOR_PALETTE = [
   "#6b7280",
 ];
 
-const DEFAULT_TOOL_STYLE = {
-  stroke: "#000000",
-  fill: "transparent",
-  strokeWidth: 2,
-  opacity: 1,
-  lineDash: [] as number[],
-};
+// Canvas boundaries
+const CANVAS_BOUNDS = 5000;
+const clampCamera = (val: number) =>
+  Math.max(-CANVAS_BOUNDS, Math.min(CANVAS_BOUNDS, val));
 
 export function useCanvasEngine({
   elements,
@@ -61,14 +52,12 @@ export function useCanvasEngine({
   onUpdateElement,
   onDeleteElements,
 }: UseCanvasEngineOptions) {
-  // ── Canvas refs ─────────────────────────────────────────────────────────
   const staticRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef<HTMLCanvasElement>(null);
   const cursorRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ── Zustand state ───────────────────────────────────────────────────────
   const activeTool = useCanvasStore((s) => s.activeTool);
   const zoom = useCanvasStore((s) => s.zoom);
   const camera = useCanvasStore((s) => s.camera);
@@ -76,19 +65,20 @@ export function useCanvasEngine({
   const isPanMode = useCanvasStore((s) => s.isPanMode);
   const canvasColor = useCanvasStore((s) => s.canvasColor);
   const backgroundPattern = useCanvasStore((s) => s.backgroundPattern);
+
   const setZoom = useCanvasStore((s) => s.setZoom);
   const setCamera = useCanvasStore((s) => s.setCamera);
   const setSelectedElementIds = useCanvasStore((s) => s.setSelectedElementIds);
   const setIsPanMode = useCanvasStore((s) => s.setIsPanMode);
   const clearSelection = useCanvasStore((s) => s.clearSelection);
 
-  // ── Drawing state (refs to avoid re-renders during drawing) ─────────────
+  // Drawing state
   const isDrawing = useRef(false);
   const drawStart = useRef<{ wx: number; wy: number } | null>(null);
   const currentPoints = useRef<[number, number][]>([]);
   const activeElement = useRef<CanvasElement | null>(null);
 
-  // ── Pan state ───────────────────────────────────────────────────────────
+  // Pan state
   const isPanning = useRef(false);
   const panStart = useRef<{
     sx: number;
@@ -97,20 +87,24 @@ export function useCanvasEngine({
     cy: number;
   } | null>(null);
 
+  // Drag & Resize state
+  const dragAction = useRef<{
+    mode: "drag" | "resize";
+    handle?: string; // e.g., 'nw', 'se'
+    startX: number;
+    startY: number;
+    originalElements: Map<string, CanvasElement>;
+  } | null>(null);
+
   // ── Stroke settings ─────────────────────────────────────────────────────
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(2);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  RENDERING — using a ref to always have the latest render function
-  // ══════════════════════════════════════════════════════════════════════════
+  const [lineDash, setLineDash] = useState<number[]>([]);
 
   const renderAllRef = useRef<() => void>(() => {});
   const rafId = useRef<number>(0);
   const isDirty = useRef(false);
 
-  // markDirty schedules a single RAF paint. The RAF callback reads from
-  // renderAllRef, which always points to the latest renderAll closure.
   const markDirty = useCallback(() => {
     if (!isDirty.current) {
       isDirty.current = true;
@@ -121,7 +115,6 @@ export function useCanvasEngine({
     }
   }, []);
 
-  // Update renderAllRef every time dependencies change
   useEffect(() => {
     renderAllRef.current = () => {
       // ── Static Layer ──────────────────────────────────────────────────
@@ -139,6 +132,7 @@ export function useCanvasEngine({
 
           // Background pattern
           if (backgroundPattern !== "plain") {
+            const theme = getThemeColors(canvasColor);
             const spacing = 30 * zoom;
             const offsetX =
               (((-camera.x * zoom) % spacing) + spacing) % spacing;
@@ -147,7 +141,7 @@ export function useCanvasEngine({
 
             if (backgroundPattern === "grid") {
               ctx.save();
-              ctx.strokeStyle = "rgba(0,0,0,0.08)";
+              ctx.strokeStyle = theme.patternStroke;
               ctx.lineWidth = 1;
               for (let x = offsetX; x < w; x += spacing) {
                 ctx.beginPath();
@@ -164,7 +158,7 @@ export function useCanvasEngine({
               ctx.restore();
             } else if (backgroundPattern === "dots") {
               ctx.save();
-              ctx.fillStyle = "rgba(0,0,0,0.15)";
+              ctx.fillStyle = theme.patternDotFill;
               for (let x = offsetX; x < w; x += spacing) {
                 for (let y = offsetY; y < h; y += spacing) {
                   ctx.beginPath();
@@ -176,7 +170,6 @@ export function useCanvasEngine({
             }
           }
 
-          // Draw committed elements
           const viewBounds = getViewportBounds(w, h, camera, zoom);
           ctx.save();
           ctx.scale(zoom, zoom);
@@ -184,6 +177,13 @@ export function useCanvasEngine({
           for (const id of elementOrder) {
             const el = elements.get(id);
             if (!el) continue;
+            // hide elements currently being dragged/resized (rendered in active layer instead)
+            if (
+              dragAction.current &&
+              dragAction.current.originalElements.has(id)
+            )
+              continue;
+
             if (!isInViewport(el.x, el.y, el.width, el.height, viewBounds))
               continue;
             renderElement(ctx, el);
@@ -192,20 +192,31 @@ export function useCanvasEngine({
         }
       }
 
-      // ── Active Layer (currently drawn stroke/shape) ───────────────────
+      // ── Active Layer ───────────────────────────────────────────────────
       const activeCanvas = activeRef.current;
       if (activeCanvas) {
         const ctx = activeCanvas.getContext("2d");
         if (ctx) {
           ctx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
-          const el = activeElement.current;
-          if (el) {
-            ctx.save();
-            ctx.scale(zoom, zoom);
-            ctx.translate(-camera.x, -camera.y);
-            renderElement(ctx, el);
-            ctx.restore();
+
+          ctx.save();
+          ctx.scale(zoom, zoom);
+          ctx.translate(-camera.x, -camera.y);
+
+          // Currently drawn stroke
+          if (activeElement.current) {
+            renderElement(ctx, activeElement.current);
           }
+
+          // Currently dragged/resized elements
+          if (dragAction.current) {
+            for (const id of selectedElementIds) {
+              const el = elements.get(id);
+              if (el) renderElement(ctx, el);
+            }
+          }
+
+          ctx.restore();
         }
       }
 
@@ -219,6 +230,7 @@ export function useCanvasEngine({
             ctx.save();
             ctx.scale(zoom, zoom);
             ctx.translate(-camera.x, -camera.y);
+
             for (const id of selectedElementIds) {
               const el = elements.get(id);
               if (!el) continue;
@@ -228,20 +240,23 @@ export function useCanvasEngine({
               const bw = el.width + pad * 2;
               const bh = el.height + pad * 2;
               const hs = 8 / zoom;
+
               ctx.strokeStyle = "#3b82f6";
               ctx.lineWidth = 1.5 / zoom;
               ctx.setLineDash([]);
               ctx.strokeRect(x, y, bw, bh);
+
               ctx.fillStyle = "#ffffff";
+              // Handles
               for (const [hx, hy] of [
                 [x, y],
-                [x + bw, y],
-                [x, y + bh],
-                [x + bw, y + bh],
                 [x + bw / 2, y],
-                [x + bw / 2, y + bh],
+                [x + bw, y],
                 [x, y + bh / 2],
                 [x + bw, y + bh / 2],
+                [x, y + bh],
+                [x + bw / 2, y + bh],
+                [x + bw, y + bh],
               ]) {
                 ctx.beginPath();
                 ctx.rect(hx - hs / 2, hy - hs / 2, hs, hs);
@@ -264,7 +279,6 @@ export function useCanvasEngine({
     selectedElementIds,
   ]);
 
-  // Trigger repaint whenever any rendering dependency changes
   useEffect(() => {
     markDirty();
   }, [
@@ -278,7 +292,6 @@ export function useCanvasEngine({
     markDirty,
   ]);
 
-  // ── Resize handler ──────────────────────────────────────────────────────
   useEffect(() => {
     const resize = () => {
       const container = containerRef.current;
@@ -298,16 +311,11 @@ export function useCanvasEngine({
     return () => ro.disconnect();
   }, [markDirty]);
 
-  // Cleanup RAF on unmount
   useEffect(() => {
     return () => {
       if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, []);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  EVENT HANDLERS
-  // ══════════════════════════════════════════════════════════════════════════
 
   const getWorldPos = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
@@ -322,7 +330,7 @@ export function useCanvasEngine({
     [camera, zoom],
   );
 
-  // ── Keyboard Shortcuts ──────────────────────────────────────────────────
+  // Keyboard Shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -332,6 +340,20 @@ export function useCanvasEngine({
         e.preventDefault();
         setIsPanMode(true);
       }
+
+      if (!e.ctrlKey && !e.metaKey) {
+        const k = e.key.toLowerCase();
+        if (k === "v") useCanvasStore.getState().setActiveTool("select");
+        if (k === "p") useCanvasStore.getState().setActiveTool("pen");
+        if (k === "r") useCanvasStore.getState().setActiveTool("rect");
+        if (k === "o") useCanvasStore.getState().setActiveTool("ellipse");
+        if (k === "l") useCanvasStore.getState().setActiveTool("line");
+        if (k === "a") useCanvasStore.getState().setActiveTool("arrow");
+        if (k === "t") useCanvasStore.getState().setActiveTool("text");
+        if (k === "e") useCanvasStore.getState().setActiveTool("eraser");
+        if (k === "h") useCanvasStore.getState().setActiveTool("pan");
+      }
+
       if (e.key === "Escape") clearSelection();
       if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         e.preventDefault();
@@ -381,10 +403,10 @@ export function useCanvasEngine({
     setIsPanMode,
   ]);
 
-  // ── Wheel Zoom (zoom toward cursor) ────────────────────────────────────
+  // Wheel Zoom
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       const canvas = overlayRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -395,12 +417,49 @@ export function useCanvasEngine({
       const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
       const newZoom = clampZoom(zoom * factor);
       setZoom(newZoom);
-      setCamera({ x: wx - sx / newZoom, y: wy - sy / newZoom });
+      setCamera({
+        x: clampCamera(wx - sx / newZoom),
+        y: clampCamera(wy - sy / newZoom),
+      });
     },
     [zoom, camera, setZoom, setCamera],
   );
 
-  // ── Mouse Down ─────────────────────────────────────────────────────────
+  // Hit test handles
+  const getHandleAt = (wx: number, wy: number): string | null => {
+    if (selectedElementIds.length === 0) return null;
+    const hs = 10 / zoom; // slightly larger hit area
+    const pad = 4 / zoom;
+
+    // For single selection, check handles
+    if (selectedElementIds.length === 1) {
+      const el = elements.get(selectedElementIds[0]);
+      if (!el) return null;
+      const x = el.x - pad;
+      const y = el.y - pad;
+      const bw = el.width + pad * 2;
+      const bh = el.height + pad * 2;
+
+      const handles = [
+        { id: "nw", cx: x, cy: y },
+        { id: "n", cx: x + bw / 2, cy: y },
+        { id: "ne", cx: x + bw, cy: y },
+        { id: "w", cx: x, cy: y + bh / 2 },
+        { id: "e", cx: x + bw, cy: y + bh / 2 },
+        { id: "sw", cx: x, cy: y + bh },
+        { id: "s", cx: x + bw / 2, cy: y + bh },
+        { id: "se", cx: x + bw, cy: y + bh },
+      ];
+
+      for (const h of handles) {
+        if (Math.abs(wx - h.cx) <= hs && Math.abs(wy - h.cy) <= hs) {
+          return h.id;
+        }
+      }
+    }
+    return null;
+  };
+
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
@@ -421,6 +480,53 @@ export function useCanvasEngine({
 
       // Select
       if (tool === "select") {
+        // 1. Check resize handle
+        const handle = getHandleAt(wx, wy);
+        if (handle && selectedElementIds.length === 1) {
+          const id = selectedElementIds[0];
+          const el = elements.get(id);
+          if (el) {
+            dragAction.current = {
+              mode: "resize",
+              handle,
+              startX: wx,
+              startY: wy,
+              originalElements: new Map([[id, { ...el }]]),
+            };
+            markDirty(); // Trigger active layer render
+            return;
+          }
+        }
+
+        // 2. Check drag on existing selection
+        const isOverSelected = selectedElementIds.some((id) => {
+          const el = elements.get(id);
+          if (!el) return false;
+          return (
+            wx >= el.x &&
+            wx <= el.x + el.width &&
+            wy >= el.y &&
+            wy <= el.y + el.height
+          );
+        });
+
+        if (isOverSelected) {
+          const originals = new Map();
+          selectedElementIds.forEach((id) => {
+            const el = elements.get(id);
+            if (el) originals.set(id, { ...el });
+          });
+          dragAction.current = {
+            mode: "drag",
+            startX: wx,
+            startY: wy,
+            originalElements: originals,
+          };
+          markDirty();
+          return;
+        }
+
+        // 3. New selection
         const reversed = [...elementOrder].reverse();
         for (const id of reversed) {
           const el = elements.get(id);
@@ -435,6 +541,14 @@ export function useCanvasEngine({
               useCanvasStore.getState().addSelectedElementId(id);
             } else {
               setSelectedElementIds([id]);
+              // Start drag immediately on new selection
+              dragAction.current = {
+                mode: "drag",
+                startX: wx,
+                startY: wy,
+                originalElements: new Map([[id, { ...el }]]),
+              };
+              markDirty();
             }
             return;
           }
@@ -448,8 +562,26 @@ export function useCanvasEngine({
       drawStart.current = { wx, wy };
       currentPoints.current = [[wx, wy]];
 
-      const elType =
-        tool === "eraser" ? "path" : (tool as CanvasElement["type"]);
+      if (tool === "eraser") {
+        const reversed = [...elementOrder].reverse();
+        for (const id of reversed) {
+          const el = elements.get(id);
+          if (!el) continue;
+          if (
+            wx >= el.x &&
+            wx <= el.x + el.width &&
+            wy >= el.y &&
+            wy <= el.y + el.height
+          ) {
+            onDeleteElements([id]);
+            return;
+          }
+        }
+        return; // keep isDrawing=true for drag erasing
+      }
+
+      const elType = tool === "pen" ? "path" : (tool as CanvasElement["type"]);
+
       const newEl: CanvasElement = {
         id: nanoid(),
         type: elType,
@@ -463,13 +595,14 @@ export function useCanvasEngine({
           fill: "transparent",
           strokeWidth: strokeWidth,
           opacity: 1,
-          lineDash: [],
+          lineDash: lineDash,
         },
         points: elType === "path" ? [[wx, wy]] : undefined,
         createdBy: "local",
         createdAt: Date.now(),
       };
       activeElement.current = newEl;
+      clearSelection();
       markDirty();
     },
     [
@@ -480,58 +613,161 @@ export function useCanvasEngine({
       elementOrder,
       strokeColor,
       strokeWidth,
+      selectedElementIds,
       getWorldPos,
       clearSelection,
       setSelectedElementIds,
+      onDeleteElements,
       markDirty,
     ],
   );
 
-  // ── Mouse Move ─────────────────────────────────────────────────────────
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
       // Pan
       if (isPanning.current && panStart.current) {
         const dx = (e.clientX - panStart.current.sx) / zoom;
         const dy = (e.clientY - panStart.current.sy) / zoom;
-        setCamera({ x: panStart.current.cx - dx, y: panStart.current.cy - dy });
+        setCamera({
+          x: clampCamera(panStart.current.cx - dx),
+          y: clampCamera(panStart.current.cy - dy),
+        });
         return;
       }
-      if (!isDrawing.current || !activeElement.current || !drawStart.current)
+
+      // Drag / Resize
+      if (dragAction.current) {
+        const { wx, wy } = getWorldPos(e);
+        const { mode, handle, startX, startY, originalElements } =
+          dragAction.current;
+        const dx = wx - startX;
+        const dy = wy - startY;
+
+        if (mode === "drag") {
+          selectedElementIds.forEach((id) => {
+            const orig = originalElements.get(id);
+            if (orig) {
+              onUpdateElement(id, { x: orig.x + dx, y: orig.y + dy });
+            }
+          });
+        } else if (
+          mode === "resize" &&
+          handle &&
+          selectedElementIds.length === 1
+        ) {
+          const id = selectedElementIds[0];
+          const orig = originalElements.get(id);
+          if (orig) {
+            let nx = orig.x,
+              ny = orig.y,
+              nw = orig.width,
+              nh = orig.height;
+
+            // Adjust bounds based on handle
+            if (handle.includes("e")) nw += dx;
+            if (handle.includes("s")) nh += dy;
+            if (handle.includes("w")) {
+              nx += dx;
+              nw -= dx;
+            }
+            if (handle.includes("n")) {
+              ny += dy;
+              nh -= dy;
+            }
+
+            // Normalize negative dimensions
+            if (nw < 0 && orig.type !== "line") {
+              nx += nw;
+              nw = Math.abs(nw);
+            }
+            if (nh < 0 && orig.type !== "line") {
+              ny += nh;
+              nh = Math.abs(nh);
+            }
+
+            onUpdateElement(id, { x: nx, y: ny, width: nw, height: nh });
+          }
+        }
+        markDirty();
         return;
+      }
+
+      // Drawing or Erasing
+      if (!isDrawing.current || !drawStart.current) return;
       const { wx, wy } = getWorldPos(e);
+
+      if (activeTool === "eraser") {
+        const toDelete: string[] = [];
+        const reversed = [...elementOrder].reverse();
+        for (const id of reversed) {
+          const el = elements.get(id);
+          if (!el) continue;
+          if (
+            wx >= el.x &&
+            wx <= el.x + el.width &&
+            wy >= el.y &&
+            wy <= el.y + el.height
+          ) {
+            toDelete.push(id);
+          }
+        }
+        if (toDelete.length > 0) onDeleteElements(toDelete);
+        return;
+      }
+
       const startW = drawStart.current;
       const el = activeElement.current;
+      if (!el) return;
 
       if (el.type === "path") {
         currentPoints.current.push([wx, wy]);
         activeElement.current = { ...el, points: [...currentPoints.current] };
       } else {
-        const x = Math.min(startW.wx, wx);
-        const y = Math.min(startW.wy, wy);
-        const w = Math.abs(wx - startW.wx);
-        const h = Math.abs(wy - startW.wy);
+        let w = Math.abs(wx - startW.wx);
+        let h = Math.abs(wy - startW.wy);
+
+        if (e.shiftKey && (el.type === "rect" || el.type === "ellipse")) {
+          const maxDim = Math.max(w, h);
+          w = maxDim;
+          h = maxDim;
+        }
+
+        const x = wx < startW.wx ? startW.wx - w : startW.wx;
+        const y = wy < startW.wy ? startW.wy - h : startW.wy;
+
         activeElement.current = { ...el, x, y, width: w, height: h };
       }
       markDirty();
     },
-    [zoom, getWorldPos, setCamera, markDirty],
+    [
+      zoom,
+      getWorldPos,
+      setCamera,
+      selectedElementIds,
+      onUpdateElement,
+      markDirty,
+    ],
   );
 
-  // ── Mouse Up ───────────────────────────────────────────────────────────
   const onMouseUp = useCallback(() => {
     if (isPanning.current) {
       isPanning.current = false;
       panStart.current = null;
       return;
     }
+
+    if (dragAction.current) {
+      dragAction.current = null;
+      markDirty();
+      return;
+    }
+
     if (!isDrawing.current || !activeElement.current) return;
     isDrawing.current = false;
 
     let el = activeElement.current;
     activeElement.current = null;
 
-    // Simplify freehand path
     if (el.type === "path" && el.points && el.points.length > 2) {
       const simplified = simplifyPath(el.points);
       const xs = simplified.map((p) => p[0]);
@@ -546,7 +782,7 @@ export function useCanvasEngine({
       };
     }
 
-    // Discard tiny accidental shapes (but keep all paths)
+    // Discard tiny shapes
     if (el.type !== "path" && el.width < 2 && el.height < 2) {
       markDirty();
       return;
@@ -561,7 +797,7 @@ export function useCanvasEngine({
     if (activeTool === "pan") return "grab";
     if (activeTool === "eraser") return "cell";
     if (activeTool === "text") return "text";
-    if (activeTool === "select") return "default";
+    if (activeTool === "select") return "default"; // could dynamically show resize arrows
     return "crosshair";
   };
 
@@ -580,5 +816,7 @@ export function useCanvasEngine({
     setStrokeColor,
     strokeWidth,
     setStrokeWidth,
+    lineDash,
+    setLineDash,
   };
 }

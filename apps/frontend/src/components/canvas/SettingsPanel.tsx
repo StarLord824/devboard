@@ -7,6 +7,7 @@
 import { useCanvasStore } from "@/stores/canvasStore";
 import type { BackgroundPattern } from "@/lib/canvas-types";
 import { COLOR_PALETTE } from "./CanvasEngine";
+import { getThemeColors } from "@/lib/color-utils";
 import { X } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { useState } from "react";
@@ -81,25 +82,29 @@ export default function SettingsPanel() {
     setSettingsPanelOpen,
   } = useCanvasStore();
   const [showCustomColor, setShowCustomColor] = useState(false);
+  const theme = getThemeColors(canvasColor);
 
   return (
     <div
       className="absolute bottom-6 left-16 z-30"
       style={{
-        background: "rgba(255,255,255,0.96)",
+        background: theme.uiBackground,
         backdropFilter: "blur(16px)",
         borderRadius: 16,
         padding: 20,
         minWidth: 240,
         boxShadow: "0 8px 48px rgba(0,0,0,0.16)",
-        border: "1px solid rgba(0,0,0,0.08)",
+        border: `1px solid ${theme.uiBorder}`,
       }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-800 text-sm">Canvas Settings</h3>
+        <h3 className="font-semibold text-sm" style={{ color: theme.uiText }}>
+          Canvas Settings
+        </h3>
         <button
           onClick={() => setSettingsPanelOpen(false)}
-          className="text-gray-400 hover:text-gray-700"
+          className="hover:opacity-70 transition-opacity"
+          style={{ color: theme.uiText }}
         >
           <X size={16} />
         </button>
@@ -107,7 +112,10 @@ export default function SettingsPanel() {
 
       {/* Background Color */}
       <section className="mb-4">
-        <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">
+        <p
+          className="text-xs mb-2 font-medium uppercase tracking-wide opacity-70"
+          style={{ color: theme.uiText }}
+        >
           Background Color
         </p>
         <div className="flex flex-wrap gap-2 mb-2">
@@ -156,7 +164,10 @@ export default function SettingsPanel() {
 
       {/* Background Pattern */}
       <section>
-        <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">
+        <p
+          className="text-xs mb-2 font-medium uppercase tracking-wide opacity-70"
+          style={{ color: theme.uiText }}
+        >
           Pattern
         </p>
         <div className="flex gap-3">
@@ -179,7 +190,12 @@ export default function SettingsPanel() {
               >
                 {preview}
               </div>
-              <span className="text-xs text-gray-500">{label}</span>
+              <span
+                className="text-xs"
+                style={{ color: theme.uiText, opacity: 0.8 }}
+              >
+                {label}
+              </span>
             </button>
           ))}
         </div>

@@ -5,6 +5,7 @@
 import { useCanvasStore } from "@/stores/canvasStore";
 import { ToolType } from "@/lib/canvas-types";
 import { COLOR_PALETTE } from "./CanvasEngine";
+import { getThemeColors } from "@/lib/color-utils";
 import {
   MousePointer2,
   Pen,
@@ -27,6 +28,8 @@ interface ToolbarProps {
   onStrokeColorChange: (c: string) => void;
   strokeWidth: number;
   onStrokeWidthChange: (w: number) => void;
+  lineDash: number[];
+  onLineDashChange: (d: number[]) => void;
 }
 
 const TOOLS: { tool: ToolType; icon: React.ReactNode; label: string }[] = [
@@ -46,21 +49,29 @@ export default function Toolbar({
   onStrokeColorChange,
   strokeWidth,
   onStrokeWidthChange,
+  lineDash,
+  onLineDashChange,
 }: ToolbarProps) {
-  const { activeTool, setActiveTool, setSettingsPanelOpen, settingsPanelOpen } =
-    useCanvasStore();
+  const {
+    activeTool,
+    setActiveTool,
+    setSettingsPanelOpen,
+    settingsPanelOpen,
+    canvasColor,
+  } = useCanvasStore();
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const theme = getThemeColors(canvasColor);
 
   return (
     <div
       className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1"
       style={{
-        background: "rgba(255,255,255,0.92)",
+        background: theme.uiBackground,
         backdropFilter: "blur(12px)",
         borderRadius: 16,
         padding: "10px 8px",
         boxShadow: "0 4px 32px rgba(0,0,0,0.12)",
-        border: "1px solid rgba(0,0,0,0.07)",
+        border: `1px solid ${theme.uiBorder}`,
       }}
     >
       {/* Tool buttons */}
@@ -72,14 +83,25 @@ export default function Toolbar({
           className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
           style={{
             background: activeTool === tool ? "#3b82f6" : "transparent",
-            color: activeTool === tool ? "#fff" : "#374151",
+            color: activeTool === tool ? "#fff" : theme.uiText,
+          }}
+          onMouseEnter={(e) => {
+            if (activeTool !== tool)
+              e.currentTarget.style.background = theme.iconHoverBg;
+          }}
+          onMouseLeave={(e) => {
+            if (activeTool !== tool)
+              e.currentTarget.style.background = "transparent";
           }}
         >
           {icon}
         </button>
       ))}
 
-      <div className="w-full h-px bg-gray-200 my-1" />
+      <div
+        className="w-full h-px my-1"
+        style={{ background: theme.uiBorder }}
+      />
 
       {/* Color palette */}
       <div className="flex flex-col gap-1 items-center">
@@ -123,22 +145,51 @@ export default function Toolbar({
           }}
         >
           <HexColorPicker color={strokeColor} onChange={onStrokeColorChange} />
-          <div className="p-2 bg-white text-xs flex items-center gap-2">
-            <span>Width:</span>
-            <input
-              type="range"
-              min={1}
-              max={40}
-              value={strokeWidth}
-              onChange={(e) => onStrokeWidthChange(Number(e.target.value))}
-              className="w-24"
-            />
-            <span>{strokeWidth}px</span>
+          <div className="p-3 bg-white flex flex-col gap-2 border-t">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-10">Width:</span>
+              <input
+                type="range"
+                min={1}
+                max={40}
+                value={strokeWidth}
+                onChange={(e) => onStrokeWidthChange(Number(e.target.value))}
+                className="w-20"
+              />
+              <span style={{ color: "black", width: 24 }}>{strokeWidth}</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-10">Style:</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => onLineDashChange([])}
+                  className="px-2 py-1 rounded border text-gray-700 hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: lineDash.length === 0 ? "#3b82f6" : "#e5e7eb",
+                  }}
+                >
+                  Solid
+                </button>
+                <button
+                  onClick={() => onLineDashChange([12, 12])}
+                  className="px-2 py-1 rounded border text-gray-700 hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: lineDash.length > 0 ? "#3b82f6" : "#e5e7eb",
+                  }}
+                >
+                  Dashed
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="w-full h-px bg-gray-200 my-1" />
+      <div
+        className="w-full h-px my-1"
+        style={{ background: theme.uiBorder }}
+      />
 
       {/* Settings button */}
       <button
@@ -146,8 +197,16 @@ export default function Toolbar({
         onClick={() => setSettingsPanelOpen(!settingsPanelOpen)}
         className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
         style={{
-          background: settingsPanelOpen ? "#f0f9ff" : "transparent",
-          color: settingsPanelOpen ? "#3b82f6" : "#374151",
+          background: settingsPanelOpen ? "#3b82f6" : "transparent",
+          color: settingsPanelOpen ? "#fff" : theme.uiText,
+        }}
+        onMouseEnter={(e) => {
+          if (!settingsPanelOpen)
+            e.currentTarget.style.background = theme.iconHoverBg;
+        }}
+        onMouseLeave={(e) => {
+          if (!settingsPanelOpen)
+            e.currentTarget.style.background = "transparent";
         }}
       >
         <Settings size={18} />
