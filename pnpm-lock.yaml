@@ -138,7 +138,7 @@ importers:
         version: 4.0.17
       zustand:
         specifier: ^5.0.8
-        version: 5.0.8(@types/react@19.1.0)(react@19.1.0)
+        version: 5.0.8(@types/react@19.1.0)(immer@11.1.4)(react@19.1.0)
     devDependencies:
       '@devboard/common':
         specifier: workspace:*
@@ -164,6 +164,24 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@tanstack/react-query':
+        specifier: ^5.90.21
+        version: 5.90.21(react@19.1.0)
+      axios:
+        specifier: ^1.11.0
+        version: 1.11.0
+      dexie:
+        specifier: ^4.3.0
+        version: 4.3.0
+      immer:
+        specifier: ^11.1.4
+        version: 11.1.4
+      lucide-react:
+        specifier: ^0.543.0
+        version: 0.543.0(react@19.1.0)
+      motion:
+        specifier: ^12.23.12
+        version: 12.23.12(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       next:
         specifier: 15.4.6
         version: 15.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -173,6 +191,18 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      y-websocket:
+        specifier: ^3.0.0
+        version: 3.0.0(yjs@13.6.29)
+      yjs:
+        specifier: ^13.6.29
+        version: 13.6.29
+      zod:
+        specifier: ^4.0.17
+        version: 4.0.17
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@19.1.0)(immer@11.1.4)(react@19.1.0)
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3
@@ -780,6 +810,14 @@ packages:
   '@tailwindcss/postcss@4.1.11':
     resolution: {integrity: sha512-q/EAIIpF6WpLhKEuQSEVMZNMIY8KhWoAemZ9eylNAih9jxMGAYPPWBn3I9QL/2jZ+e7OEz/tZkX5HwbBR4HohA==}
 
+  '@tanstack/query-core@5.90.20':
+    resolution: {integrity: sha512-OMD2HLpNouXEfZJWcKeVKUgQ5n+n3A2JFmBaScpNDUqSrQSjiveC7dKMe53uJUg1nDG16ttFPz2xfilz6i2uVg==}
+
+  '@tanstack/react-query@5.90.21':
+    resolution: {integrity: sha512-0Lu6y5t+tvlTJMTO7oh5NSpJfpg/5D41LlThfepTixPYkJ0sE2Jj0m0f6yYqujBwIXlId87e234+MxG3D3g7kg==}
+    peerDependencies:
+      react: ^18 || ^19
+
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
@@ -1289,6 +1327,9 @@ packages:
     resolution: {integrity: sha512-3UDv+G9CsCKO1WKMGw9fwq/SWJYbI0c5Y7LU1AXYoDdbhE2AHQ6N6Nb34sG8Fj7T5APy8qXDCKuuIHd1BR0tVA==}
     engines: {node: '>=8'}
 
+  dexie@4.3.0:
+    resolution: {integrity: sha512-5EeoQpJvMKHe6zWt/FSIIuRa3CWlZeIl6zKXt+Lz7BU6RoRRLgX9dZEynRfXrkLcldKYCBiz7xekTEylnie1Ug==}
+
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
@@ -1716,6 +1757,9 @@ packages:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
 
+  immer@11.1.4:
+    resolution: {integrity: sha512-XREFCPo6ksxVzP4E0ekD5aMdf8WMwmdNaz6vuvxgI40UaEiu6q3p8X52aU6GdyvLY3XXX/8R7JOTXStz/nBbRw==}
+
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
@@ -1854,6 +1898,9 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  isomorphic.js@0.2.5:
+    resolution: {integrity: sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw==}
+
   iterator.prototype@1.1.5:
     resolution: {integrity: sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g==}
     engines: {node: '>= 0.4'}
@@ -1912,6 +1959,11 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  lib0@0.2.117:
+    resolution: {integrity: sha512-DeXj9X5xDCjgKLU/7RR+/HQEVzuuEUiwldwOGsHK/sfAfELGWEyTcf0x+uOvCvK3O2zPmZePXWL85vtia6GyZw==}
+    engines: {node: '>=16'}
+    hasBin: true
 
   lightningcss-darwin-arm64@1.30.1:
     resolution: {integrity: sha512-c8JK7hyE65X1MHMN+Viq9n11RRC7hgin3HhYKhrMyaXflk5GVplZ60IxyoVtzILeKr+xAJwg6zK6sjTBJ0FKYQ==}
@@ -2793,12 +2845,28 @@ packages:
       utf-8-validate:
         optional: true
 
+  y-protocols@1.0.7:
+    resolution: {integrity: sha512-YSVsLoXxO67J6eE/nV4AtFtT3QEotZf5sK5BHxFBXso7VDUT3Tx07IfA6hsu5Q5OmBdMkQVmFZ9QOA7fikWvnw==}
+    engines: {node: '>=16.0.0', npm: '>=8.0.0'}
+    peerDependencies:
+      yjs: ^13.0.0
+
+  y-websocket@3.0.0:
+    resolution: {integrity: sha512-mUHy7AzkOZ834T/7piqtlA8Yk6AchqKqcrCXjKW8J1w2lPtRDjz8W5/CvXz9higKAHgKRKqpI3T33YkRFLkPtg==}
+    engines: {node: '>=16.0.0', npm: '>=8.0.0'}
+    peerDependencies:
+      yjs: ^13.5.6
+
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
 
   yallist@5.0.0:
     resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
     engines: {node: '>=18'}
+
+  yjs@13.6.29:
+    resolution: {integrity: sha512-kHqDPdltoXH+X4w1lVmMtddE3Oeqq48nM40FD5ojTd8xYhQpzIDcfE2keMSU5bAgRPJBe225WTUdyUgj1DtbiQ==}
+    engines: {node: '>=16.0.0', npm: '>=8.0.0'}
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -3201,6 +3269,13 @@ snapshots:
       '@tailwindcss/oxide': 4.1.11
       postcss: 8.5.6
       tailwindcss: 4.1.11
+
+  '@tanstack/query-core@5.90.20': {}
+
+  '@tanstack/react-query@5.90.21(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-core': 5.90.20
+      react: 19.1.0
 
   '@tybys/wasm-util@0.10.1':
     dependencies:
@@ -3837,6 +3912,8 @@ snapshots:
 
   detect-libc@2.0.4: {}
 
+  dexie@4.3.0: {}
+
   doctrine@2.1.0:
     dependencies:
       esutils: 2.0.3
@@ -4432,6 +4509,8 @@ snapshots:
 
   ignore@7.0.5: {}
 
+  immer@11.1.4: {}
+
   import-fresh@3.3.1:
     dependencies:
       parent-module: 1.0.1
@@ -4571,6 +4650,8 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  isomorphic.js@0.2.5: {}
+
   iterator.prototype@1.1.5:
     dependencies:
       define-data-property: 1.1.4
@@ -4645,6 +4726,10 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  lib0@0.2.117:
+    dependencies:
+      isomorphic.js: 0.2.5
 
   lightningcss-darwin-arm64@1.30.1:
     optional: true
@@ -5609,15 +5694,31 @@ snapshots:
       bufferutil: 4.1.0
       utf-8-validate: 5.0.10
 
+  y-protocols@1.0.7(yjs@13.6.29):
+    dependencies:
+      lib0: 0.2.117
+      yjs: 13.6.29
+
+  y-websocket@3.0.0(yjs@13.6.29):
+    dependencies:
+      lib0: 0.2.117
+      y-protocols: 1.0.7(yjs@13.6.29)
+      yjs: 13.6.29
+
   yallist@4.0.0: {}
 
   yallist@5.0.0: {}
+
+  yjs@13.6.29:
+    dependencies:
+      lib0: 0.2.117
 
   yocto-queue@0.1.0: {}
 
   zod@4.0.17: {}
 
-  zustand@5.0.8(@types/react@19.1.0)(react@19.1.0):
+  zustand@5.0.8(@types/react@19.1.0)(immer@11.1.4)(react@19.1.0):
     optionalDependencies:
       '@types/react': 19.1.0
+      immer: 11.1.4
       react: 19.1.0

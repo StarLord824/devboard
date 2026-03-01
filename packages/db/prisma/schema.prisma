@@ -1,12 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Devboard V2 — Production Schema
+// Better-Auth manages User, Session, Account, Verification — do not manually edit those fields.
+// App domain tables: Board, BoardMember, Page, Note, Snapshot, InviteLink
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -14,37 +11,177 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ------------------------------------------------------------------
+// BETTER-AUTH MANAGED TABLES
+// ------------------------------------------------------------------
+
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  name      String
-  email     String   @unique
-  password  String
-  photo     String?
-  boards    Board[]  @relation("createdBoards")
-  participatedBoards Board[] @relation("participated")
-  Chats     Chat[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  // App relations
+  ownedBoards   Board[]       @relation("ownedBoards")
+  boardMembers  BoardMember[]
+  notes         Note[]
+  snapshots     Snapshot[]    @relation("createdSnapshots")
+  sessions      Session[]
+  accounts      Account[]
 }
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime
+  updatedAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime
+  updatedAt  DateTime
+}
+
+// ------------------------------------------------------------------
+// APP DOMAIN TABLES
+// ------------------------------------------------------------------
 
 model Board {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  admin      User     @relation("createdBoards", fields: [adminId], references: [id])
-  adminId    String
-  participants User[] @relation("participated")
-  Chats     Chat[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  ownerId     String
+  owner       User          @relation("ownedBoards", fields: [ownerId], references: [id])
+  members     BoardMember[]
+  pages       Page[]
+  snapshots   Snapshot[]
+  inviteLinks InviteLink[]
+  isArchived  Boolean       @default(false)
+  thumbnail   String?       // URL to latest snapshot PNG (Cloudflare R2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([ownerId])
 }
 
-model Chat {
-  id        Int      @id @default(autoincrement())
-  message   String
-  board     Board    @relation(fields: [boardId], references: [id])
+model BoardMember {
+  id       String     @id @default(cuid())
+  boardId  String
+  userId   String
+  role     MemberRole @default(EDITOR)
+  board    Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime   @default(now())
+
+  @@unique([boardId, userId])
+  @@index([userId])
+}
+
+model Page {
+  id        String     @id @default(cuid())
   boardId   String
-  sender      User     @relation(fields: [senderId], references: [id])
-  senderId    String
+  board     Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  name      String     @default("Page 1")
+  order     Int
+  yjsState  Bytes?     // Serialized Y.Doc binary — the entire canvas CRDT state
+  notes     Note[]
+  snapshots Snapshot[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([boardId, order])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String   // Rich text as Tiptap JSON string
+  x         Float    // World-space canvas coordinate
+  y         Float    // World-space canvas coordinate
+  width     Float    @default(240)
+  color     String   @default("#FEF08A")
+  isPinned  Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId])
+  @@index([authorId])
+}
+
+model Snapshot {
+  id          String       @id @default(cuid())
+  boardId     String
+  pageId      String
+  board       Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  page        Page         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  name        String?      // null = auto-snapshot
+  type        SnapshotType
+  imageUrl    String       // Cloudflare R2 URL of full PNG
+  thumbUrl    String       // Cloudflare R2 URL of 200px thumbnail
+  yjsState    Bytes        // Frozen Y.Doc binary at snapshot time
+  createdById String
+  createdBy   User         @relation("createdSnapshots", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@index([boardId, pageId, createdAt])
+}
+
+model InviteLink {
+  id        String     @id @default(cuid())
+  boardId   String
+  board     Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  token     String     @unique @default(cuid())
+  role      MemberRole @default(EDITOR)
+  expiresAt DateTime?
+  usedCount Int        @default(0)
+  maxUses   Int?       // null = unlimited
+  createdAt DateTime   @default(now())
+
+  @@index([token])
+}
+
+// ------------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------------
+
+enum MemberRole {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
+enum SnapshotType {
+  AUTO
+  MANUAL
 }
