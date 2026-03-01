@@ -2,25 +2,17 @@
 
 // CanvasEngine — The core rendering engine and event handler.
 // Uses 4 stacked HTML5 canvases:
-//   STATIC  (z=1) — committed elements from Y.Doc. Redrawn only when doc changes.
+//   STATIC  (z=1) — committed elements. Redrawn on state or viewport change.
 //   ACTIVE  (z=2) — element currently being drawn. Cleared every mousemove.
 //   CURSOR  (z=3) — remote collaborator cursors (Phase 4).
 //   OVERLAY (z=4) — selection handles, resize knobs.
 //
-// PERFORMANCE strategy:
-//   - dirty flag + requestAnimationFrame: never renders if nothing changed.
-//   - Viewport culling: skips elements entirely outside the visible area.
-//   - Static layer redraws only when Y.Doc or zoom/camera changes.
+// RENDERING FIX: renderAll is stored in a ref so the RAF callback always
+// calls the latest version, avoiding stale closure bugs.
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import type {
-  CanvasElement,
-  ToolType,
-  Camera,
-  BackgroundPattern,
-} from "@/lib/canvas-types";
+import type { CanvasElement, ToolType } from "@/lib/canvas-types";
 import {
-  worldToScreen,
   screenToWorld,
   clampZoom,
   getViewportBounds,
@@ -39,7 +31,6 @@ interface UseCanvasEngineOptions {
   onDeleteElements: (ids: string[]) => void;
 }
 
-// Predefined stroke color palette
 export const COLOR_PALETTE = [
   "#000000",
   "#ffffff",
@@ -55,70 +46,12 @@ export const COLOR_PALETTE = [
   "#6b7280",
 ];
 
-const DEFAULT_TOOL_STYLES: Record<ToolType, Partial<CanvasElement["style"]>> = {
-  pen: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 2,
-    opacity: 1,
-    lineDash: [],
-  },
-  rect: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 2,
-    opacity: 1,
-    lineDash: [],
-  },
-  ellipse: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 2,
-    opacity: 1,
-    lineDash: [],
-  },
-  line: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 2,
-    opacity: 1,
-    lineDash: [],
-  },
-  arrow: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 2,
-    opacity: 1,
-    lineDash: [],
-  },
-  text: {
-    stroke: "#000000",
-    fill: "transparent",
-    strokeWidth: 1,
-    opacity: 1,
-    lineDash: [],
-  },
-  eraser: {
-    stroke: "#ffffff",
-    fill: "#ffffff",
-    strokeWidth: 20,
-    opacity: 1,
-    lineDash: [],
-  },
-  select: {
-    stroke: "#3b82f6",
-    fill: "rgba(59,130,246,0.08)",
-    strokeWidth: 1,
-    opacity: 1,
-    lineDash: [4, 4],
-  },
-  pan: {
-    stroke: "transparent",
-    fill: "transparent",
-    strokeWidth: 0,
-    opacity: 1,
-    lineDash: [],
-  },
+const DEFAULT_TOOL_STYLE = {
+  stroke: "#000000",
+  fill: "transparent",
+  strokeWidth: 2,
+  opacity: 1,
+  lineDash: [] as number[],
 };
 
 export function useCanvasEngine({
@@ -128,43 +61,34 @@ export function useCanvasEngine({
   onUpdateElement,
   onDeleteElements,
 }: UseCanvasEngineOptions) {
+  // ── Canvas refs ─────────────────────────────────────────────────────────
   const staticRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef<HTMLCanvasElement>(null);
   const cursorRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const {
-    activeTool,
-    zoom,
-    camera,
-    selectedElementIds,
-    isPanMode,
-    canvasColor,
-    backgroundPattern,
-    setZoom,
-    setCamera,
-    setSelectedElementIds,
-    setIsPanMode,
-    clearSelection,
-  } = useCanvasStore();
+  // ── Zustand state ───────────────────────────────────────────────────────
+  const activeTool = useCanvasStore((s) => s.activeTool);
+  const zoom = useCanvasStore((s) => s.zoom);
+  const camera = useCanvasStore((s) => s.camera);
+  const selectedElementIds = useCanvasStore((s) => s.selectedElementIds);
+  const isPanMode = useCanvasStore((s) => s.isPanMode);
+  const canvasColor = useCanvasStore((s) => s.canvasColor);
+  const backgroundPattern = useCanvasStore((s) => s.backgroundPattern);
+  const setZoom = useCanvasStore((s) => s.setZoom);
+  const setCamera = useCanvasStore((s) => s.setCamera);
+  const setSelectedElementIds = useCanvasStore((s) => s.setSelectedElementIds);
+  const setIsPanMode = useCanvasStore((s) => s.setIsPanMode);
+  const clearSelection = useCanvasStore((s) => s.clearSelection);
 
-  // Dirty flag — only repaint when something changed
-  const isDirty = useRef(false);
-  const markDirty = useCallback(() => {
-    if (!isDirty.current) {
-      isDirty.current = true;
-      requestAnimationFrame(renderAll);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ─── Drawing state (refs — not state, to avoid re-renders during drawing) ───
+  // ── Drawing state (refs to avoid re-renders during drawing) ─────────────
   const isDrawing = useRef(false);
   const drawStart = useRef<{ wx: number; wy: number } | null>(null);
   const currentPoints = useRef<[number, number][]>([]);
   const activeElement = useRef<CanvasElement | null>(null);
 
-  // Pan state
+  // ── Pan state ───────────────────────────────────────────────────────────
   const isPanning = useRef(false);
   const panStart = useRef<{
     sx: number;
@@ -173,164 +97,174 @@ export function useCanvasEngine({
     cy: number;
   } | null>(null);
 
-  // ─── Active stroke color (persisted to store optionally) ─────────────────
+  // ── Stroke settings ─────────────────────────────────────────────────────
   const [strokeColor, setStrokeColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(2);
 
-  // ─── Rendering ───────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  //  RENDERING — using a ref to always have the latest render function
+  // ══════════════════════════════════════════════════════════════════════════
 
-  const drawBackground = useCallback(
-    (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      ctx.fillStyle = canvasColor;
-      ctx.fillRect(0, 0, w, h);
+  const renderAllRef = useRef<() => void>(() => {});
+  const rafId = useRef<number>(0);
+  const isDirty = useRef(false);
 
-      if (backgroundPattern === "plain") return;
+  // markDirty schedules a single RAF paint. The RAF callback reads from
+  // renderAllRef, which always points to the latest renderAll closure.
+  const markDirty = useCallback(() => {
+    if (!isDirty.current) {
+      isDirty.current = true;
+      rafId.current = requestAnimationFrame(() => {
+        isDirty.current = false;
+        renderAllRef.current();
+      });
+    }
+  }, []);
 
-      const spacing = 30 * zoom;
-      const offsetX = (-camera.x * zoom) % spacing;
-      const offsetY = (-camera.y * zoom) % spacing;
+  // Update renderAllRef every time dependencies change
+  useEffect(() => {
+    renderAllRef.current = () => {
+      // ── Static Layer ──────────────────────────────────────────────────
+      const staticCanvas = staticRef.current;
+      if (staticCanvas) {
+        const ctx = staticCanvas.getContext("2d");
+        if (ctx) {
+          const w = staticCanvas.width;
+          const h = staticCanvas.height;
+          ctx.clearRect(0, 0, w, h);
 
-      ctx.save();
-      ctx.strokeStyle = "rgba(0,0,0,0.08)";
-      ctx.lineWidth = 1;
+          // Background fill
+          ctx.fillStyle = canvasColor;
+          ctx.fillRect(0, 0, w, h);
 
-      if (backgroundPattern === "grid") {
-        for (let x = offsetX; x < w; x += spacing) {
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, h);
-          ctx.stroke();
+          // Background pattern
+          if (backgroundPattern !== "plain") {
+            const spacing = 30 * zoom;
+            const offsetX =
+              (((-camera.x * zoom) % spacing) + spacing) % spacing;
+            const offsetY =
+              (((-camera.y * zoom) % spacing) + spacing) % spacing;
+
+            if (backgroundPattern === "grid") {
+              ctx.save();
+              ctx.strokeStyle = "rgba(0,0,0,0.08)";
+              ctx.lineWidth = 1;
+              for (let x = offsetX; x < w; x += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+              }
+              for (let y = offsetY; y < h; y += spacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+              }
+              ctx.restore();
+            } else if (backgroundPattern === "dots") {
+              ctx.save();
+              ctx.fillStyle = "rgba(0,0,0,0.15)";
+              for (let x = offsetX; x < w; x += spacing) {
+                for (let y = offsetY; y < h; y += spacing) {
+                  ctx.beginPath();
+                  ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+              }
+              ctx.restore();
+            }
+          }
+
+          // Draw committed elements
+          const viewBounds = getViewportBounds(w, h, camera, zoom);
+          ctx.save();
+          ctx.scale(zoom, zoom);
+          ctx.translate(-camera.x, -camera.y);
+          for (const id of elementOrder) {
+            const el = elements.get(id);
+            if (!el) continue;
+            if (!isInViewport(el.x, el.y, el.width, el.height, viewBounds))
+              continue;
+            renderElement(ctx, el);
+          }
+          ctx.restore();
         }
-        for (let y = offsetY; y < h; y += spacing) {
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(w, y);
-          ctx.stroke();
-        }
-      } else if (backgroundPattern === "dots") {
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
-        for (let x = offsetX; x < w; x += spacing) {
-          for (let y = offsetY; y < h; y += spacing) {
-            ctx.beginPath();
-            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
+      }
+
+      // ── Active Layer (currently drawn stroke/shape) ───────────────────
+      const activeCanvas = activeRef.current;
+      if (activeCanvas) {
+        const ctx = activeCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
+          const el = activeElement.current;
+          if (el) {
+            ctx.save();
+            ctx.scale(zoom, zoom);
+            ctx.translate(-camera.x, -camera.y);
+            renderElement(ctx, el);
+            ctx.restore();
           }
         }
       }
-      ctx.restore();
-    },
-    [canvasColor, backgroundPattern, zoom, camera],
-  );
 
-  const renderStaticLayer = useCallback(() => {
-    const canvas = staticRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const { width: w, height: h } = canvas;
-
-    ctx.clearRect(0, 0, w, h);
-    drawBackground(ctx, w, h);
-
-    const viewBounds = getViewportBounds(w, h, camera, zoom);
-
-    ctx.save();
-    ctx.scale(zoom, zoom);
-    ctx.translate(-camera.x, -camera.y);
-
-    for (const id of elementOrder) {
-      const el = elements.get(id);
-      if (!el) continue;
-      if (!isInViewport(el.x, el.y, el.width, el.height, viewBounds)) continue;
-      renderElement(ctx, el);
-    }
-
-    ctx.restore();
-  }, [elements, elementOrder, zoom, camera, drawBackground]);
-
-  const renderActiveLayer = useCallback(() => {
-    const canvas = activeRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const { width: w, height: h } = canvas;
-
-    ctx.clearRect(0, 0, w, h);
-    const el = activeElement.current;
-    if (!el) return;
-
-    ctx.save();
-    ctx.scale(zoom, zoom);
-    ctx.translate(-camera.x, -camera.y);
-    renderElement(ctx, el);
-    ctx.restore();
-  }, [zoom, camera]);
-
-  const renderOverlayLayer = useCallback(() => {
-    const canvas = overlayRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const { width: w, height: h } = canvas;
-    ctx.clearRect(0, 0, w, h);
-
-    if (selectedElementIds.length === 0) return;
-
-    ctx.save();
-    ctx.scale(zoom, zoom);
-    ctx.translate(-camera.x, -camera.y);
-
-    for (const id of selectedElementIds) {
-      const el = elements.get(id);
-      if (!el) continue;
-
-      const pad = 4 / zoom;
-      const x = el.x - pad;
-      const y = el.y - pad;
-      const w2 = el.width + pad * 2;
-      const h2 = el.height + pad * 2;
-      const handleSize = 8 / zoom;
-
-      ctx.strokeStyle = "#3b82f6";
-      ctx.lineWidth = 1.5 / zoom;
-      ctx.setLineDash([]);
-      ctx.strokeRect(x, y, w2, h2);
-
-      // Corner handles
-      ctx.fillStyle = "#ffffff";
-      for (const [hx, hy] of [
-        [x, y],
-        [x + w2, y],
-        [x, y + h2],
-        [x + w2, y + h2],
-        [x + w2 / 2, y],
-        [x + w2 / 2, y + h2],
-        [x, y + h2 / 2],
-        [x + w2, y + h2 / 2],
-      ]) {
-        ctx.beginPath();
-        ctx.rect(
-          hx - handleSize / 2,
-          hy - handleSize / 2,
-          handleSize,
-          handleSize,
-        );
-        ctx.fill();
-        ctx.stroke();
+      // ── Overlay Layer (selection handles) ─────────────────────────────
+      const overlayCanvas = overlayRef.current;
+      if (overlayCanvas) {
+        const ctx = overlayCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          if (selectedElementIds.length > 0) {
+            ctx.save();
+            ctx.scale(zoom, zoom);
+            ctx.translate(-camera.x, -camera.y);
+            for (const id of selectedElementIds) {
+              const el = elements.get(id);
+              if (!el) continue;
+              const pad = 4 / zoom;
+              const x = el.x - pad;
+              const y = el.y - pad;
+              const bw = el.width + pad * 2;
+              const bh = el.height + pad * 2;
+              const hs = 8 / zoom;
+              ctx.strokeStyle = "#3b82f6";
+              ctx.lineWidth = 1.5 / zoom;
+              ctx.setLineDash([]);
+              ctx.strokeRect(x, y, bw, bh);
+              ctx.fillStyle = "#ffffff";
+              for (const [hx, hy] of [
+                [x, y],
+                [x + bw, y],
+                [x, y + bh],
+                [x + bw, y + bh],
+                [x + bw / 2, y],
+                [x + bw / 2, y + bh],
+                [x, y + bh / 2],
+                [x + bw, y + bh / 2],
+              ]) {
+                ctx.beginPath();
+                ctx.rect(hx - hs / 2, hy - hs / 2, hs, hs);
+                ctx.fill();
+                ctx.stroke();
+              }
+            }
+            ctx.restore();
+          }
+        }
       }
-    }
+    };
+  }, [
+    elements,
+    elementOrder,
+    zoom,
+    camera,
+    canvasColor,
+    backgroundPattern,
+    selectedElementIds,
+  ]);
 
-    ctx.restore();
-  }, [selectedElementIds, elements, zoom, camera]);
-
-  const renderAll = useCallback(() => {
-    isDirty.current = false;
-    renderStaticLayer();
-    renderActiveLayer();
-    renderOverlayLayer();
-  }, [renderStaticLayer, renderActiveLayer, renderOverlayLayer]);
-
-  // Re-render when dependencies change
+  // Trigger repaint whenever any rendering dependency changes
   useEffect(() => {
     markDirty();
   }, [
@@ -338,15 +272,13 @@ export function useCanvasEngine({
     elementOrder,
     zoom,
     camera,
-    selectedElementIds,
     canvasColor,
     backgroundPattern,
+    selectedElementIds,
     markDirty,
   ]);
 
-  // ─── Resize handler ───────────────────────────────────────────────────────
-  const containerRef = useRef<HTMLDivElement>(null);
-
+  // ── Resize handler ──────────────────────────────────────────────────────
   useEffect(() => {
     const resize = () => {
       const container = containerRef.current;
@@ -366,7 +298,16 @@ export function useCanvasEngine({
     return () => ro.disconnect();
   }, [markDirty]);
 
-  // ─── Mouse & Touch event helpers ─────────────────────────────────────────
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  EVENT HANDLERS
+  // ══════════════════════════════════════════════════════════════════════════
 
   const getWorldPos = useCallback(
     (e: React.MouseEvent | MouseEvent) => {
@@ -381,45 +322,34 @@ export function useCanvasEngine({
     [camera, zoom],
   );
 
-  // ─── Keyboard Shortcuts ───────────────────────────────────────────────────
-
+  // ── Keyboard Shortcuts ──────────────────────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.target as HTMLElement).tagName === "INPUT" ||
-        (e.target as HTMLElement).tagName === "TEXTAREA"
-      )
-        return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
 
       if (e.code === "Space") {
         e.preventDefault();
         setIsPanMode(true);
       }
-
-      if (e.key === "Escape") {
-        clearSelection();
-      }
-
+      if (e.key === "Escape") clearSelection();
       if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         e.preventDefault();
         setSelectedElementIds(elementOrder);
       }
-
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedElementIds.length > 0) {
           onDeleteElements(selectedElementIds);
           clearSelection();
         }
       }
-
       if ((e.ctrlKey || e.metaKey) && e.key === "d") {
         e.preventDefault();
-        // Duplicate selected elements
-        const newElements: CanvasElement[] = [];
+        const dupes: CanvasElement[] = [];
         for (const id of selectedElementIds) {
           const el = elements.get(id);
           if (!el) continue;
-          newElements.push({
+          dupes.push({
             ...el,
             id: nanoid(),
             x: el.x + 20,
@@ -427,15 +357,13 @@ export function useCanvasEngine({
             createdAt: Date.now(),
           });
         }
-        newElements.forEach(onCommitElement);
-        setSelectedElementIds(newElements.map((e) => e.id));
+        dupes.forEach(onCommitElement);
+        setSelectedElementIds(dupes.map((d) => d.id));
       }
     };
-
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") setIsPanMode(false);
     };
-
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
@@ -453,43 +381,33 @@ export function useCanvasEngine({
     setIsPanMode,
   ]);
 
-  // ─── Wheel Zoom ───────────────────────────────────────────────────────────
-
+  // ── Wheel Zoom (zoom toward cursor) ────────────────────────────────────
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
       const canvas = overlayRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
-
-      // World position under cursor before zoom
       const wx = sx / zoom + camera.x;
       const wy = sy / zoom + camera.y;
-
       const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
       const newZoom = clampZoom(zoom * factor);
-
-      // Keep world point under cursor fixed
-      const newCamX = wx - sx / newZoom;
-      const newCamY = wy - sy / newZoom;
-
       setZoom(newZoom);
-      setCamera({ x: newCamX, y: newCamY });
+      setCamera({ x: wx - sx / newZoom, y: wy - sy / newZoom });
     },
     [zoom, camera, setZoom, setCamera],
   );
 
-  // ─── Mouse Down ───────────────────────────────────────────────────────────
-
+  // ── Mouse Down ─────────────────────────────────────────────────────────
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
       const tool = isPanMode ? "pan" : activeTool;
       const { wx, wy } = getWorldPos(e);
 
+      // Pan
       if (tool === "pan") {
         isPanning.current = true;
         panStart.current = {
@@ -501,8 +419,8 @@ export function useCanvasEngine({
         return;
       }
 
+      // Select
       if (tool === "select") {
-        // Hit-test elements in reverse order (top-most first)
         const reversed = [...elementOrder].reverse();
         for (const id of reversed) {
           const el = elements.get(id);
@@ -525,37 +443,32 @@ export function useCanvasEngine({
         return;
       }
 
-      // Start drawing a new element
+      // Start drawing
       isDrawing.current = true;
       drawStart.current = { wx, wy };
       currentPoints.current = [[wx, wy]];
 
-      const baseStyle = {
-        ...DEFAULT_TOOL_STYLES[tool],
-        stroke: strokeColor,
-        strokeWidth,
-      };
-      let newEl: CanvasElement = {
+      const elType =
+        tool === "eraser" ? "path" : (tool as CanvasElement["type"]);
+      const newEl: CanvasElement = {
         id: nanoid(),
-        type: tool === "eraser" ? "rect" : (tool as CanvasElement["type"]),
+        type: elType,
         x: wx,
         y: wy,
         width: 0,
         height: 0,
         rotation: 0,
         style: {
-          ...baseStyle,
           stroke: strokeColor,
-          fill: baseStyle.fill ?? "transparent",
+          fill: "transparent",
           strokeWidth: strokeWidth,
-          opacity: baseStyle.opacity ?? 1,
-          lineDash: baseStyle.lineDash ?? [],
+          opacity: 1,
+          lineDash: [],
         },
-        points: tool === "pen" || tool === "eraser" ? [[wx, wy]] : undefined,
+        points: elType === "path" ? [[wx, wy]] : undefined,
         createdBy: "local",
         createdAt: Date.now(),
       };
-
       activeElement.current = newEl;
       markDirty();
     },
@@ -563,7 +476,6 @@ export function useCanvasEngine({
       activeTool,
       isPanMode,
       camera,
-      zoom,
       elements,
       elementOrder,
       strokeColor,
@@ -575,8 +487,7 @@ export function useCanvasEngine({
     ],
   );
 
-  // ─── Mouse Move ───────────────────────────────────────────────────────────
-
+  // ── Mouse Move ─────────────────────────────────────────────────────────
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
       // Pan
@@ -586,39 +497,34 @@ export function useCanvasEngine({
         setCamera({ x: panStart.current.cx - dx, y: panStart.current.cy - dy });
         return;
       }
-
       if (!isDrawing.current || !activeElement.current || !drawStart.current)
         return;
       const { wx, wy } = getWorldPos(e);
-      const { wx: sx, wy: sy } = drawStart.current;
+      const startW = drawStart.current;
       const el = activeElement.current;
 
       if (el.type === "path") {
         currentPoints.current.push([wx, wy]);
         activeElement.current = { ...el, points: [...currentPoints.current] };
       } else {
-        // Shape: compute normalized bounding box
-        const x = Math.min(sx, wx);
-        const y = Math.min(sy, wy);
-        const w = Math.abs(wx - sx);
-        const h = Math.abs(wy - sy);
+        const x = Math.min(startW.wx, wx);
+        const y = Math.min(startW.wy, wy);
+        const w = Math.abs(wx - startW.wx);
+        const h = Math.abs(wy - startW.wy);
         activeElement.current = { ...el, x, y, width: w, height: h };
       }
-
       markDirty();
     },
     [zoom, getWorldPos, setCamera, markDirty],
   );
 
-  // ─── Mouse Up ─────────────────────────────────────────────────────────────
-
+  // ── Mouse Up ───────────────────────────────────────────────────────────
   const onMouseUp = useCallback(() => {
     if (isPanning.current) {
       isPanning.current = false;
       panStart.current = null;
       return;
     }
-
     if (!isDrawing.current || !activeElement.current) return;
     isDrawing.current = false;
 
@@ -640,7 +546,7 @@ export function useCanvasEngine({
       };
     }
 
-    // Discard tiny accidental marks
+    // Discard tiny accidental shapes (but keep all paths)
     if (el.type !== "path" && el.width < 2 && el.height < 2) {
       markDirty();
       return;

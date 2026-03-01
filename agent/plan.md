@@ -108,8 +108,8 @@ Devboard is a production-grade collaborative drawing board application. Users ca
 ### Phase 2 — Authentication
 **Goal**: Better-Auth fully integrated. Users own boards.
 
-- [ ] Remove manual JWT + bcrypt from `apps/api`
-- [ ] Remove `next-auth` from `apps/frontend`
+<!-- - [ ] Remove manual JWT + bcrypt from `apps/api`
+- [ ] Remove `next-auth` from `apps/frontend` -->
 - [ ] Better-Auth setup: email/password + GitHub OAuth
 - [ ] DB-backed sessions (revocable)
 - [ ] Next.js middleware for route protection
