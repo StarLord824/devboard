@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import CanvasLayers from "@/components/canvas/CanvasLayers";
+import BoardClient from "./BoardClient";
 
 interface Props {
   params: Promise<{ boardId: string }>;
@@ -15,7 +15,7 @@ export default async function BoardPage({ params }: Props) {
 
   return (
     <main className="w-screen h-screen overflow-hidden bg-white">
-      <CanvasLayers boardId={boardId} />
+      <BoardClient boardId={boardId} />
     </main>
   );
 }

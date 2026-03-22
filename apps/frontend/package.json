@@ -9,8 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@better-fetch/fetch": "^1.1.21",
+    "@devboard/db": "workspace:^",
     "@tanstack/react-query": "^5.90.21",
     "axios": "^1.11.0",
+    "better-auth": "^1.5.0",
     "dexie": "^4.3.0",
     "immer": "^11.1.4",
     "lucide-react": "^0.543.0",

@@ -127,6 +127,14 @@ Devboard is a production-grade collaborative drawing board application. Users ca
 - [ ] Board sharing: invite link generation (configurable permissions)
 - [ ] Thumbnail generation on save (server-renders 200px PNG)
 
+### Phase 3.5 — Landing Page
+**Goal**: Marketing landing page for the app.
+
+- [ ] Landing page: hero section, features, pricing, testimonials, contact form
+- [ ] Marketing copy and design
+- [ ] SEO optimization
+- [ ] Social media links
+
 ### Phase 4 — Real-Time Collaboration
 **Goal**: Multiple users drawing simultaneously, conflict-free.
 
