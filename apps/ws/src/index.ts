@@ -1,8 +1,6 @@
 import { WebSocketServer } from "ws";
 import http from "http";
 import dotenv from "dotenv";
-// @ts-ignore
-import { setupWSConnection } from "y-websocket/bin/utils";
 import * as cookie from "cookie";
 import prisma from "@devboard/db/prismaClient";
 
@@ -62,7 +60,13 @@ wss.on("connection", (conn, req) => {
   const urlParts = req.url?.split("/") || [];
   const docName = urlParts[urlParts.length - 1] || "global";
 
-  setupWSConnection(conn, req, { docName, gc: true });
+  console.log(`[WS] Connection opened for workspace document: ${docName}`);
+  // Phase 4 will implement actual Yjs syncing via y-websocket here.
+  
+  conn.on("message", (msg) => {
+    // Basic echo for now
+    conn.send(`Echo: ${msg}`);
+  });
 });
 
 server.listen(PORT, () => {
