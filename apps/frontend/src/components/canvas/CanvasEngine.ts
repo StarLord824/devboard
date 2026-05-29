@@ -23,6 +23,7 @@ interface UseCanvasEngineOptions {
   onCommitElement: (element: CanvasElement) => void;
   onUpdateElement: (id: string, partial: Partial<CanvasElement>) => void;
   onDeleteElements: (ids: string[]) => void;
+  onAwarenessUpdate?: (pos: { x: number; y: number }) => void;
 }
 
 export const COLOR_PALETTE = [
@@ -51,6 +52,7 @@ export function useCanvasEngine({
   onCommitElement,
   onUpdateElement,
   onDeleteElements,
+  onAwarenessUpdate,
 }: UseCanvasEngineOptions) {
   const staticRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef<HTMLCanvasElement>(null);
@@ -624,6 +626,10 @@ export function useCanvasEngine({
 
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // Always broadcast world-space cursor position to collaborators
+      const pos = getWorldPos(e);
+      onAwarenessUpdate?.({ x: pos.wx, y: pos.wy });
+
       // Pan
       if (isPanning.current && panStart.current) {
         const dx = (e.clientX - panStart.current.sx) / zoom;
@@ -746,6 +752,7 @@ export function useCanvasEngine({
       selectedElementIds,
       onUpdateElement,
       markDirty,
+      onAwarenessUpdate,
     ],
   );
 
