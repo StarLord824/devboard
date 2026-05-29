@@ -24,6 +24,7 @@ interface DocState {
 
 const docs = new Map<string, DocState>();
 const writeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const inflight = new Map<string, Promise<DocState>>();
 
 async function writeToDB(pageId: string, doc: Y.Doc): Promise<void> {
   const state = Buffer.from(Y.encodeStateAsUpdate(doc));
@@ -34,69 +35,77 @@ async function writeToDB(pageId: string, doc: Y.Doc): Promise<void> {
 
 async function getOrCreateDoc(pageId: string): Promise<DocState> {
   if (docs.has(pageId)) return docs.get(pageId)!;
+  if (inflight.has(pageId)) return inflight.get(pageId)!;
 
-  const doc = new Y.Doc({ gc: true });
-  const awareness = new awarenessProtocol.Awareness(doc);
-  const conns = new Map<WebSocket, Set<number>>();
-  const state: DocState = { doc, awareness, conns };
-  docs.set(pageId, state);
+  const promise = (async (): Promise<DocState> => {
+    const doc = new Y.Doc({ gc: true });
+    const awareness = new awarenessProtocol.Awareness(doc);
+    const conns = new Map<WebSocket, Set<number>>();
+    const state: DocState = { doc, awareness, conns };
 
-  // Load persisted state
-  const page = await prisma.page.findUnique({ where: { id: pageId } });
-  if (page?.yjsState) {
-    Y.applyUpdate(doc, page.yjsState as Uint8Array);
-  }
+    // Load persisted state
+    const page = await prisma.page.findUnique({ where: { id: pageId } });
+    if (page?.yjsState) {
+      Y.applyUpdate(doc, page.yjsState as Uint8Array);
+    }
 
-  // Broadcast updates + schedule 30s DB write
-  doc.on("update", (update: Uint8Array, origin: unknown) => {
-    const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, MESSAGE_SYNC);
-    syncProtocol.writeUpdate(encoder, update);
-    const message = encoding.toUint8Array(encoder);
-    conns.forEach((_, conn) => {
-      if (conn !== origin && conn.readyState === WebSocket.OPEN) {
-        conn.send(message);
-      }
-    });
-    // Debounced persistence
-    const existing = writeTimers.get(pageId);
-    if (existing) clearTimeout(existing);
-    writeTimers.set(
-      pageId,
-      setTimeout(() => {
-        writeToDB(pageId, doc);
-        writeTimers.delete(pageId);
-      }, 30_000)
-    );
-  });
-
-  // Broadcast awareness changes to all conns
-  awareness.on(
-    "update",
-    (
-      { added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
-      origin: unknown
-    ) => {
-      // Track which clientIds each conn owns
-      if (origin instanceof WebSocket) {
-        const ownedIds = conns.get(origin);
-        if (ownedIds) added.forEach((id) => ownedIds.add(id));
-      }
-      const changedClients = added.concat(updated).concat(removed);
+    // Broadcast updates + schedule 30s DB write
+    doc.on("update", (update: Uint8Array, origin: unknown) => {
       const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
-      encoding.writeVarUint8Array(
-        encoder,
-        awarenessProtocol.encodeAwarenessUpdate(awareness, changedClients)
-      );
+      encoding.writeVarUint(encoder, MESSAGE_SYNC);
+      syncProtocol.writeUpdate(encoder, update);
       const message = encoding.toUint8Array(encoder);
       conns.forEach((_, conn) => {
-        if (conn.readyState === WebSocket.OPEN) conn.send(message);
+        if (conn !== origin && conn.readyState === WebSocket.OPEN) {
+          conn.send(message);
+        }
       });
-    }
-  );
+      const existing = writeTimers.get(pageId);
+      if (existing) clearTimeout(existing);
+      writeTimers.set(
+        pageId,
+        setTimeout(() => {
+          writeToDB(pageId, doc);
+          writeTimers.delete(pageId);
+        }, 30_000)
+      );
+    });
 
-  return state;
+    // Broadcast awareness changes to all conns
+    awareness.on(
+      "update",
+      (
+        { added, updated, removed }: { added: number[]; updated: number[]; removed: number[] },
+        origin: unknown
+      ) => {
+        if (origin instanceof WebSocket) {
+          const ownedIds = conns.get(origin);
+          if (ownedIds) added.forEach((id) => ownedIds.add(id));
+        }
+        const changedClients = added.concat(updated).concat(removed);
+        const encoder = encoding.createEncoder();
+        encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
+        encoding.writeVarUint8Array(
+          encoder,
+          awarenessProtocol.encodeAwarenessUpdate(awareness, changedClients)
+        );
+        const message = encoding.toUint8Array(encoder);
+        conns.forEach((_, conn) => {
+          if (conn.readyState === WebSocket.OPEN) conn.send(message);
+        });
+      }
+    );
+
+    docs.set(pageId, state);
+    return state;
+  })();
+
+  inflight.set(pageId, promise);
+  try {
+    return await promise;
+  } finally {
+    inflight.delete(pageId);
+  }
 }
 
 function setupConnection(conn: WebSocket, pageId: string, state: DocState): void {
@@ -158,7 +167,7 @@ function setupConnection(conn: WebSocket, pageId: string, state: DocState): void
         clearTimeout(timer);
         writeTimers.delete(pageId);
       }
-      writeToDB(pageId, doc).then(() => docs.delete(pageId));
+      writeToDB(pageId, doc).finally(() => docs.delete(pageId));
     }
   });
 }
@@ -197,7 +206,8 @@ server.on("upgrade", async (request, socket, head) => {
       return;
     }
 
-    const pageId = request.url?.split("/").filter(Boolean).pop() ?? "";
+    const pathname = new URL(request.url ?? "/", "ws://x").pathname;
+    const pageId = pathname.split("/").filter(Boolean).pop() ?? "";
     if (!pageId) {
       socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
       socket.destroy();
