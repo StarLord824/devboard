@@ -157,12 +157,18 @@ importers:
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
+      lib0:
+        specifier: ^0.2.117
+        version: 0.2.117
       utf-8-validate:
         specifier: ^5.0.2
         version: 5.0.10
       ws:
         specifier: ^8.18.0
         version: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      y-protocols:
+        specifier: ^1.0.7
+        version: 1.0.7(yjs@13.6.29)
       y-websocket:
         specifier: ^3.0.0
         version: 3.0.0(yjs@13.6.29)
