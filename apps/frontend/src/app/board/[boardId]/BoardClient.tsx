@@ -71,7 +71,7 @@ export default function BoardClient({ boardId }: { boardId: string }) {
       <CanvasTopbar boardId={boardId} boardName={boardName} />
 
       <div className="relative flex-1 overflow-hidden">
-        <CanvasLayers boardId={boardId} />
+        <CanvasLayers boardId={boardId} pageId={activePageId} />
 
         {!loading && pages.length > 0 && (
           <PagesStrip
