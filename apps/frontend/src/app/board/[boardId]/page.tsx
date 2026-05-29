@@ -14,7 +14,7 @@ export default async function BoardPage({ params }: Props) {
   const { boardId } = await params;
 
   return (
-    <main className="w-screen h-screen overflow-hidden bg-white">
+    <main className="w-screen h-screen overflow-hidden bg-white flex flex-col">
       <BoardClient boardId={boardId} />
     </main>
   );

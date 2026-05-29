@@ -10,6 +10,15 @@ async function getCurrentUser() {
   return session.user;
 }
 
+export async function getBoardName(boardId: string) {
+  await getCurrentUser();
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    select: { name: true },
+  });
+  return board?.name ?? "Untitled";
+}
+
 export async function getPages(boardId: string) {
   await getCurrentUser();
   const pages = await prisma.page.findMany({

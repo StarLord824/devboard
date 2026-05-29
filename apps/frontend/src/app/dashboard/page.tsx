@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Topbar from "@/components/dashboard/Topbar";
 import BoardCard from "@/components/dashboard/BoardCard";
 import CreateBoardDialog from "@/components/dashboard/CreateBoardDialog";
+import ShareDialog from "@/components/dashboard/ShareDialog";
 import {
   getBoards,
   createBoard,
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [shareDialogBoardId, setShareDialogBoardId] = useState<string | null>(null);
 
   const fetchBoards = useCallback(async () => {
     try {
@@ -166,6 +168,7 @@ export default function DashboardPage() {
                 onDuplicate={handleDuplicate}
                 onArchive={handleArchive}
                 onDelete={handleDelete}
+                onShare={setShareDialogBoardId}
               />
             ))}
           </div>
@@ -197,6 +200,12 @@ export default function DashboardPage() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onCreate={handleCreate}
+      />
+
+      <ShareDialog
+        open={shareDialogBoardId !== null}
+        boardId={shareDialogBoardId ?? ""}
+        onClose={() => setShareDialogBoardId(null)}
       />
     </>
   );

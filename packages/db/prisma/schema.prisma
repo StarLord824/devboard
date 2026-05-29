@@ -50,6 +50,7 @@ model Account {
   userId                String
   accountId             String
   providerId            String
+  password              String?
   accessToken           String?
   refreshToken          String?
   accessTokenExpiresAt  DateTime?
